@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guess the Anime</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <h1>Guess the Anime</h1>
+    <video id="anime-video" controls></video>
+
+    <div class="input-wrapper">
+      <input
+        type="text"
+        id="guess-input"
+        placeholder="Enter your guess here"
+        autocomplete="off"
+      />
+      <ul id="suggestions" class="hidden"></ul>
+    </div>
+    <div id="popup-message" class="hidden">
+      Please enter your guess before clicking next
+    </div>
+    <button id="submit-btn">Submit Guess</button>
+    <p id="result">Score:</p>
+    <button id="next-btn" class="hidden">Next Video</button>
+
+    <script src="script.js"></script>
+  </body>
+</html>

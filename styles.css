@@ -17,6 +17,20 @@ h3 {
     color: white;
 }
 
+.media-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* Make sure the video doesn't get too large */
 video {
     max-width: 800px;
@@ -24,13 +38,35 @@ video {
     width: 100%;
     height: auto;
     display: block;
-    margin: 0 auto; 
+    margin: 0 auto;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 20px;
 }
 
 /* Remove the video controls */
 video::-webkit-media-controls {
     display: none !important;
 }
+
+.video-controls-container {
+    max-width: 800px;
+    margin: 0 auto 20px;
+    position: relative;
+}
+
+/* Controls Bar */
+.controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 10px 15px;
+    border-radius: 0 0 8px 8px;
+    margin-top: -5px; /* Overlaps with the video*/
+}
+
+
 
 .video-container {
     margin: 0 auto;
@@ -104,6 +140,10 @@ p {
     color: black;
 }
 
+#suggestions.hidden {
+    display: none;
+}
+
 #suggestions li {
     padding: 8px 12px;
     cursor: pointer;
@@ -120,6 +160,7 @@ p {
     gap: 20px;
     margin-top: 20px;
     flex-wrap: wrap;
+    margin-bottom: 0;
 }
 
 .input-and-suggestions {
@@ -129,10 +170,15 @@ p {
 .actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
     flex-wrap: wrap;
     justify-content: center;
-    margin-top: 20px;
+    margin: 20px auto 0;
+    max-width: 800px;
+    padding: 15px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    margin-bottom: 0;
 }
 
 .actions button,
@@ -226,11 +272,11 @@ p {
 
 /* Specific play/pause button styles */
 #play-pause-btn {
-    background-color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.8);
 }
 
 #play-pause-btn:hover {
-    background-color: #45a049;
+    background-color: rgba(69, 160, 73, 0.9);
 }
 
 /* Icon styling */
@@ -238,3 +284,58 @@ p {
     display: inline-block;
     transition: transform 0.2s;
 }
+
+/* Volume Control Styles */
+.volume-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#volume-slider {
+    width: 100px;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ddd;
+    border-radius: 3px;
+    outline: none;
+    opacity: 0.8;
+    transition: all 0.2s;
+}
+
+#volume-slider:hover {
+    opacity: 1;
+    background: #fff;
+}
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #4CAF50;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+#volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #4CAF50;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* Mute button styles */
+#mute-btn {
+    background-color: transparent;
+    width: 32px;
+    height: 32px;
+    color: white;
+}
+
+#mute-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+

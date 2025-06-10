@@ -10,6 +10,8 @@ const scorePopup = document.getElementById("score-popup");
 const finalScoreDisplay = document.getElementById("final-score");
 const playAgainButton = document.getElementById("play-again-btn");
 const playPauseButton = document.getElementById("play-pause-btn");
+const volumeSlider = document.getElementById("volume-slider");
+const muteButton = document.getElementById("mute-btn");
 const playIcon = "▶";
 const pauseIcon = "⏸";
 
@@ -18,6 +20,11 @@ const pauseIcon = "⏸";
 let currentAccepedAnswers = []; // Variable to store accepted answers for the current video
 let score = 0;
 let usedClips = []; // Array to keep track of used video clips
+let isMuted = false;
+let lastVolume = 1;
+
+// Set initial volume
+videoElement.volume = 1;
 
 // Video clips array
 const videoClips = {
@@ -28,10 +35,10 @@ const videoClips = {
     "videos/anime5.mp4": ["Hell's Paradise", "Hell Paradise","Jigokuraku"],
     "videos/anime6.mp4": ["Your Lie in April", "Shigatsu wa Kimi no Uso"],
     "videos/anime7.mp4": ["Kowloon Generic Romance"],
-    "videos/anime8.mp4": ["Demon Slayer", "Demon Slayer: Kimetsu no Yaiba", "Demon Slayer: Entertainment district arc"],
+    "videos/anime8.mp4": ["Demon Slayer", "Demon Slayer: Kimetsu no Yaiba", "Demon Slayer: Entertainment district arc", "Kimetsu no Yaiba"],
     "videos/anime9.mp4": ["Hunter x Hunter", "Hunter Hunter"],
     "videos/anime10.mp4": ["Sword Art Online", "Sword Art Online Alicization", "SAO"],
-    "videos/anime11.mp4": ["The Beginning After the End"],
+    "videos/anime11.mp4": ["The Beginning After the End", "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru?", "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru"],
     //"videos/anime12.mp4",
     //"videos/anime13.mp4",
     //"videos/anime14.mp4",
@@ -92,6 +99,44 @@ document.addEventListener("click", (e) => {
     }
 });
 
+// Volume slider event listener
+volumeSlider.addEventListener("input", () => {
+    videoElement.volume = volumeSlider.value;
+    videoElement.muted = false;
+    isMuted = false;
+    updateVolumeIcon();
+});
+
+// Mute button event listener
+muteButton.addEventListener("click", () => {
+    isMuted = !isMuted;
+    videoElement.muted = isMuted;
+
+    if (isMuted) {
+        lastVolume = videoElement.volume;
+        volumeSlider.value = 0;
+    }
+    else {
+        volumeSlider.value = lastVolume;
+        videoElement.volume = lastVolume;
+    }
+
+    updateVolumeIcon();
+});
+
+// Update volume icon based on state
+function updateVolumeIcon() {
+    if (videoElement.muted || videoElement.volume === 0) {
+        muteButton.querySelector(".volume-icon").textContent = "🔇";
+    } else if (videoElement.volume < 0.5) {
+        muteButton.querySelector(".volume-icon").textContent = "🔈";
+    } else {
+        muteButton.querySelector(".volume-icon").textContent = "🔊";
+    }
+}
+
+// Update icon when video volume changes
+videoElement.addEventListener("volumechange", updateVolumeIcon);
 
 // Function to play the next video in the list
 const loadRandomClip = () => {
@@ -210,8 +255,13 @@ updateButtonIcon();
 videoElement.addEventListener("play", updateButtonIcon);
 videoElement.addEventListener("pause", updateButtonIcon);
 
-// (Optional) Keyboard shortcut can go after all the video event listeners
+// Keyboard shortcut can go after all the video event listeners
 document.addEventListener("keydown", (e) => {
+    // Ignore all shortcuts if focused on input or suggestions are available
+    if (document.activeElement === guessInput || !suggestionsList.classList.contains("hidden")) {
+        return;
+    }
+
     if (e.code === "Space" && document.activeElement !== guessInput) {
         e.preventDefault();
         if (videoElement.paused) {
@@ -220,5 +270,21 @@ document.addEventListener("keydown", (e) => {
             videoElement.pause();
         }
         updateButtonIcon();
+    }
+
+    // Add volume control with up/down arrows
+    if (e.code === "ArrowRight") {
+        e.preventDefault();
+        videoElement.volume = Math.min(videoElement.volume + 0.1, 1);
+        volumeSlider.value = videoElement.volume;
+        updateVolumeIcon();
+    } else if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        videoElement.volume = Math.max(videoElement.volume - 0.1, 0);
+        volumeSlider.value = videoElement.volume;
+        updateVolumeIcon();
+    } else if (e.code === "KeyM") {
+        e.preventDefault();
+        muteButton.click(); // Trigger mute toggle
     }
 });

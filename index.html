@@ -11,22 +11,39 @@
     <h3>Guess the anime based on the opening</h3>
     <video id="anime-video" controls></video>
 
+    <div class="actions">
+      <button id="play-pause-btn" class="control-btn">
+        <span class="icon">⏸</span>
+      </button>
+      <button id="submit-btn">Submit Guess</button>
+      <button id="next-btn" class="hidden">Next Video</button>
+      <span id="score">Score: 0</span>
+    </div>
+
     <div class="input-wrapper">
-      <input
-        type="text"
-        id="guess-input"
-        placeholder="Enter your guess here"
-        autocomplete="off"
-      />
-      <ul id="suggestions" class="hidden"></ul>
+      <div class="input-row">
+        <div class="input-and-suggestions">
+          <input
+            type="text"
+            id="guess-input"
+            placeholder="Enter your guess here"
+            autocomplete="off"
+          />
+          <ul id="suggestions" class="hidden"></ul>
+        </div>
+      </div>
+      <div id="score-popup" class="hidden">
+        <div class="popup-content">
+          <h2>Game Over!</h2>
+          <p>Your Score was <span id="final-score">0</span></p>
+          <button id="play-again-btn">Play Again</button>
+        </div>
+      </div>
+      <div id="popup-message" class="hidden">
+        Please enter your guess before clicking next
+      </div>
+      <p id="result"></p>
     </div>
-    <div id="popup-message" class="hidden">
-      Please enter your guess before clicking next
-    </div>
-    <button id="submit-btn">Submit Guess</button>
-    <p id="result"></p>
-    <p id="score">Score: 0</p>
-    <button id="next-btn" class="hidden">Next Video</button>
 
     <script src="script.js"></script>
   </body>

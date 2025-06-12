@@ -7,6 +7,19 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div id="intro-popup" class="popup">
+      <div class="popup-content">
+        <h2>How to Play</h2>
+        <ol>
+          <li>Watch the blurred anime opening</li>
+          <li>Guess which anime it's from</li>
+          <li>Submit your answer</li>
+          <li>Correct guesses reveal the video and earn points!</li>
+        </ol>
+        <button id="start-game-btn" class="start-btn">Start Game</button>
+      </div>
+    </div>
+
     <h1>Guess the Anime</h1>
     <h3>Guess the anime based on the opening</h3>
 
@@ -24,6 +37,9 @@
       <button id="play-pause-btn" class="control-btn">
         <span class="icon">⏸</span>
       </button>
+      <button id="reset-video-btn" class="control-btn">
+        <span class="icon">↻</span>
+      </button>
       <div class="volume-control">
         <button id="mute-btn" class="control-btn">
           <span class="volume-icon">🔊</span>
@@ -40,26 +56,30 @@
     </div>
 
     <div class="input-row">
-        <div class="input-and-suggestions">
-          <input type="text" id="guess-input" placeholder="Enter your guess here" autocomplete="off">
-          <ul id="suggestions" class="hidden"></ul>
+      <div class="input-and-suggestions">
+        <input
+          type="text"
+          id="guess-input"
+          placeholder="Enter your guess here"
+          autocomplete="off"
+        />
+        <ul id="suggestions" class="hidden"></ul>
+      </div>
+    </div>
+
+    <div class="input-wrapper">
+      <div id="score-popup" class="hidden">
+        <div class="popup-content">
+          <h2>Game Over!</h2>
+          <p>Your Score was <span id="final-score">0</span></p>
+          <button id="play-again-btn">Play Again</button>
         </div>
       </div>
 
-      <div class="input-wrapper">
-        
-        <div id="score-popup" class="hidden">
-          <div class="popup-content">
-            <h2>Game Over!</h2>
-            <p>Your Score was <span id="final-score">0</span></p>
-            <button id="play-again-btn">Play Again</button>
-          </div>
-        </div>
-        <div id="popup-message" class="hidden">
-          Please enter your guess before clicking next
-        </div>
-        <p id="result"></p>
+      <div id="popup-message" class="hidden">
+        Please enter your guess before clicking next
       </div>
+      <p id="result"></p>
     </div>
 
     <script src="script.js"></script>

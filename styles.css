@@ -339,3 +339,56 @@ p {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Reset Video Button Style */
+#reset-video-btn {
+    background-color: rgba(76, 175, 80, 0.8);
+}
+
+/* Intro Popup Styles */
+#intro-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#intro-popup .popup-content {
+  background-color: #222;
+  padding: 2rem;
+  border-radius: 10px;
+  max-width: 500px;
+  text-align: center;
+  color: white;
+  border: 2px solid #444;
+}
+
+#intro-popup ol {
+  text-align: left;
+  margin: 1.5rem auto;
+  padding-left: 1.5rem;
+}
+
+#intro-popup li {
+  margin-bottom: 0.8rem;
+}
+
+.start-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 1.1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.start-btn:hover {
+  background-color: #45a049;
+}

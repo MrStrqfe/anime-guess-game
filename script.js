@@ -12,6 +12,9 @@ const playAgainButton = document.getElementById("play-again-btn");
 const playPauseButton = document.getElementById("play-pause-btn");
 const volumeSlider = document.getElementById("volume-slider");
 const muteButton = document.getElementById("mute-btn");
+const restartVideoButton = document.getElementById("reset-video-btn");
+const introPopup = document.getElementById("intro-popup");
+const startGameBtn = document.getElementById("start-game-btn");
 const playIcon = "▶";
 const pauseIcon = "⏸";
 
@@ -25,6 +28,7 @@ let lastVolume = 1;
 
 // Set initial volume
 videoElement.volume = 1;
+
 
 // Video clips array
 const videoClips = {
@@ -162,11 +166,6 @@ const loadRandomClip = () => {
     videoElement.src = selectedClip;
     videoElement.style.filter = "blur(5px)"; // Reapply blue for the next clip
 
-    // Play the new video when it's ready
-    videoElement.onloadeddata = function() {
-        videoElement.play().catch(e => console.log("Autoplay prevented:", e));
-    }
-
     currentAccepedAnswers = videoClips[selectedClip].map(ans => ans.toLowerCase()); // Update accepted answers for the current video
 
     // Add to used list
@@ -182,9 +181,13 @@ nextButton.addEventListener("click", () => {
     result.textContent = "";
 });
 
-submitButton.addEventListener("click", () => {
-    // Pause the video when submitting a guess
-    videoElement.pause();
+// submitGuess:
+//  function to submit the answer when called
+function submitGuess() {
+    // Only proceed if submit button is visible
+    if (submitButton.classList.contains("hidden")) {
+        return;
+    }
 
     const userGuess = guessInput.value.trim().toLowerCase(); // Get the user's guess and convert to lowercase
 
@@ -199,6 +202,9 @@ submitButton.addEventListener("click", () => {
         return;
     }
 
+    // Pause the video when submitting a guess
+    videoElement.pause();
+
     if (currentAccepedAnswers.includes(userGuess)) {
         result.textContent = "Correct! 🎉";
         result.style.color = "lightgreen";
@@ -212,7 +218,10 @@ submitButton.addEventListener("click", () => {
         result.textContent = "Incorrect! Try again.";
         result.style.color = "red";
     }
-});
+} 
+
+// submitButton event listener calls submitGuess
+submitButton.addEventListener("click", submitGuess);
 
 playPauseButton.addEventListener("click", () => {
     if (videoElement.paused) {
@@ -245,9 +254,6 @@ function updateButtonIcon() {
         videoElement.paused ? playIcon : pauseIcon;
 }
 
-// Load first intro
-loadRandomClip();
-
 // Initialize button state
 updateButtonIcon();
 
@@ -257,6 +263,13 @@ videoElement.addEventListener("pause", updateButtonIcon);
 
 // Keyboard shortcut can go after all the video event listeners
 document.addEventListener("keydown", (e) => {
+    // Handle Enter key press differently when input is focused
+    if (e.code === "Enter" && document.activeElement === guessInput) {
+        e.preventDefault(); // Prevent form submission behaviour
+        submitGuess(); // Call the submit function
+        return;
+    }
+
     // Ignore all shortcuts if focused on input or suggestions are available
     if (document.activeElement === guessInput || !suggestionsList.classList.contains("hidden")) {
         return;
@@ -270,6 +283,14 @@ document.addEventListener("keydown", (e) => {
             videoElement.pause();
         }
         updateButtonIcon();
+    }
+
+    // Add Enter to submit guess
+    if (e.code === "Enter") {
+        // Only trigger if the submit button is visible (not after correct answer)
+        if (!submitButton.classList.contains("hidden")) {
+            submitGuess();
+        }
     }
 
     // Add volume control with up/down arrows
@@ -287,4 +308,40 @@ document.addEventListener("keydown", (e) => {
         e.preventDefault();
         muteButton.click(); // Trigger mute toggle
     }
+
+    // Add R Key to restart video
+    if (e.code === "KeyR") {
+        e.preventDefault();
+        restartVideo();
+    }
 });
+
+// Function to restart video
+function restartVideo() {
+    // Reset video to beginning
+    videoElement.currentTime = 0;
+
+    // Reapply blur if they had guessed correctly
+    if (!submitButton.classList.contains("hidden")) {
+        videoElement.style.filter = "blur(5px)";
+    }
+
+    // If video was paused, play it after restart
+    if (videoElement.paused) {
+        videoElement.play().catch(e => console.log("Play failed:", e));
+    }
+
+    // Update the play/pause button icon if need
+    updateButtonIcon();
+}
+
+restartVideoButton.addEventListener("click", restartVideo);
+
+// function for starting the game
+function startGame() {
+    introPopup.classList.add("hidden");
+    
+    loadRandomClip(); // Initialize game
+}
+
+startGameBtn.addEventListener("click", startGame);

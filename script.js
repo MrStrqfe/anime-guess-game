@@ -15,6 +15,7 @@ const muteButton = document.getElementById("mute-btn");
 const restartVideoButton = document.getElementById("reset-video-btn");
 const introPopup = document.getElementById("intro-popup");
 const startGameBtn = document.getElementById("start-game-btn");
+const clipSourceButton = document.getElementById("clip-source-btn");
 const playIcon = "▶";
 const pauseIcon = "⏸";
 
@@ -25,25 +26,64 @@ let score = 0;
 let usedClips = []; // Array to keep track of used video clips
 let isMuted = false;
 let lastVolume = 1;
+let usingOnlineClips = false;
 
 // Set initial volume
 videoElement.volume = 1;
 
 
 // Video clips array
-const videoClips = {
-    "videos/anime1.mp4": ["Attack on Titan", "Shingeki no Kyojin"],
-    "videos/anime2.mp4": ["Blue Box", "Ao no Hako"],
-    "videos/anime3.mp4": ["Haikyuu", "Haikyuu!!", "Haikyuu!! To the Top"],
-    "videos/anime4.mp4": ["Blue Lock"],
-    "videos/anime5.mp4": ["Hell's Paradise", "Hell Paradise","Jigokuraku"],
-    "videos/anime6.mp4": ["Your Lie in April", "Shigatsu wa Kimi no Uso"],
-    "videos/anime7.mp4": ["Kowloon Generic Romance"],
-    "videos/anime8.mp4": ["Demon Slayer", "Demon Slayer: Kimetsu no Yaiba", "Demon Slayer: Entertainment district arc", "Kimetsu no Yaiba"],
-    "videos/anime9.mp4": ["Hunter x Hunter", "Hunter Hunter"],
-    "videos/anime10.mp4": ["Sword Art Online", "Sword Art Online Alicization", "SAO"],
-    "videos/anime11.mp4": ["The Beginning After the End", "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru?", "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru"],
-    "videos/anime12.mp4": ["Kaiju No. 8", "Kaiju No 8", "Kaiju", "Kaijuu 8-gou"],
+let videoClips = {};
+const fallbackClips = {
+    "videos/anime1.mp4": {
+        answers: ["Attack on Titan", "Shingeki no Kyojin"],
+        quality: "720p"
+    },
+    "videos/anime2.mp4": {
+        answers: ["Blue Box", "Ao no Hako"],
+        quality: "720p",
+    },
+    "videos/anime3.mp4": {
+        answers: ["Haikyuu", "Haikyuu!!", "Haikyuu!! To the Top"],
+        quality: "480p",    
+    },
+    "videos/anime4.mp4": {
+        answers: ["Blue Lock"],
+        quality: "480p",
+    },
+    "videos/anime5.mp4": {
+        answers: ["Hell's Paradise", "Hell Paradise","Jigokuraku"],
+        quality: "480p", 
+    },
+    "videos/anime6.mp4": {
+        answers: ["Your Lie in April", "Shigatsu wa Kimi no Uso"],
+        quality: "480p"
+    },
+    "videos/anime7.mp4": {
+        answers: ["Kowloon Generic Romance"],
+        quality: "480p"
+    },
+    "videos/anime8.mp4": {
+        answers:["Demon Slayer", "Demon Slayer: Kimetsu no Yaiba", "Demon Slayer: Entertainment district arc", "Kimetsu no Yaiba"],
+        quality: "480p"
+    },
+    "videos/anime9.mp4": {
+        answers: ["Hunter x Hunter", "Hunter Hunter"],
+        quality: "480p"
+    },
+    "videos/anime10.mp4": {
+        answers: ["Sword Art Online", "Sword Art Online Alicization", "SAO"],
+        quality: "480p"
+    },
+    "videos/anime11.mp4": {
+        answers: ["The Beginning After the End", "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru?", 
+            "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru"],
+        quality: "480p",
+    },
+    "videos/anime12.mp4": {
+        answers: ["Kaiju No. 8", "Kaiju No 8", "Kaiju", "Kaijuu 8-gou"],
+        quality: "480p",
+    },
     //"videos/anime13.mp4",
     //"videos/anime14.mp4",
     //"videos/anime15.mp4",
@@ -54,22 +94,188 @@ const videoClips = {
     //"videos/anime20.mp4",
 };
 
-// const videoClips = {};
+async function fetchPopularAnimeOpenings() {
+    const query = `
+    query {
+        Page(perPage: 100) {
+            media(type: ANIME, sort: POPULARITY_DESC, status:FINISHED) {
+                title {
+                    romaji
+                    english
+                    native
+                }
+                id
+                idMal
+            }
+        }
+    }`;
 
-// async function initClips() {
-//     try {
-//         await fetchAnimeThemes(); // Try AnimeThemes first
-//         if (Object.keys(videoClips).length < 50) {
-//             await fetchPopularAnimeOpenings(); // Fallback to Youtube
-//         }
-//     }
-//     catch (e) {
-//         videoClips = {...fallbackClips}; // Use local clips if API fails
-//     }
-// }
+    const response = await fetch(`https://graphql.anilist.co`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
+        body: JSON.stringify({ query })
+    });
 
-// // Using AnimeThemes.moe API
-// async function fetchAnimeThemes
+    const data = await response.json();
+    const animeList = data.data.Page.media;
+
+    for (const anime of animeList) {
+        const titles = [
+            anime.title.english,
+            anime.title.romaji,
+            anime.title.native
+        ].filter(Boolean);
+        
+        // Use a placeholder or try to find videos
+        videoClips[`aniList_${anime.id}`] = titles;
+    }
+
+    return animeList;
+}
+
+async function getYoutubeOpening(animeTitle) {
+    const searchQuery = encodeURIComponent(`${animeTitle} opening`);
+    const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${searchQuery}&type=video&key=YOUR_YOUTUBE_API_KEY`
+    );
+    const data = await response.json();
+    return data.items[0]?.id.videoId;
+}
+
+// Using AnimeThemes.moe API
+async function fetchAnimeThemes() {
+    try {
+        const response = await fetch('https://api.animethemes.moe/anime?include=animethemes.animethemeentries.videos&filter[has]=animethemes&filter[animetheme][type]=OP&page[size]=100');
+        
+        if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+
+        const { anime } = await response.json();
+        
+        anime.forEach(({ name, slug, animethemes }) => {
+            // Get all OP videos with their qualities
+            const opVideos = animethemes
+                .filter(theme => theme.type === 'OP')
+                .flatMap(theme => 
+                    theme.animethemeentries.flatMap(entry => 
+                        entry.videos
+                            .filter(video => video.overlap === "None")
+                            .map(video => ({
+                                url: video.link,
+                                quality: video.quality || '480p' // Default to 480p if no quality specified
+                            }))
+                    )
+                );
+
+            if (opVideos.length > 0) {
+                // Select the highest quality available (order: 1080p > 720p > 480p)
+                const bestVideo = selectBestQualityVideo(opVideos);
+                const titles = getAllAnimeNames(name, slug);
+                
+                // Store with both URL and accepted answers
+                videoClips[bestVideo.url] = {
+                    answers: titles,
+                    quality: bestVideo.quality
+                };
+            }
+        });
+        
+        console.log(`Loaded ${Object.keys(videoClips).length} anime openings with quality preference`);
+    } catch (error) {
+        console.error('Failed to fetch anime themes:', error);
+        throw error;
+    }
+}
+
+function selectBestQualityVideo(videos) {
+    // Quality priority order
+    const qualityOrder = { '1080p': 3, '720p': 2, '480p': 1, '360p': 0 };
+    
+    return videos.reduce((best, current) => {
+        const currentScore = qualityOrder[current.quality] || 0;
+        const bestScore = qualityOrder[best.quality] || 0;
+        return currentScore > bestScore ? current : best;
+    }, videos[0]);
+}
+
+// Helper function to generate all acceptable names for an anime
+function getAllAnimeNames(primaryName, slug) {
+    const names = [primaryName];
+    
+    // Add slug as alternative name (e.g., "attack-on-titan" -> "attack on titan")
+    names.push(slug.replace(/-/g, ' '));
+    
+    // Add common alternative formats
+    if (primaryName.includes(':')) {
+        names.push(primaryName.split(':')[0].trim());
+    }
+    if (primaryName.includes('!')) {
+        names.push(primaryName.replace(/!/g, '').trim());
+    }
+    
+    // Add common abbreviations (e.g., "Attack on Titan" -> "AoT")
+    if (primaryName.split(' ').length >= 3) {
+        const abbreviation = primaryName.split(' ')
+            .map(word => word[0])
+            .join('');
+        names.push(abbreviation);
+    }
+    
+    // Return unique names, lowercase for consistency
+    return [...new Set(names)]
+        .map(name => name.toLowerCase())
+        .filter(name => name.length > 0);
+}
+
+async function initClips(useOnline = false) {
+    try {
+        if (useOnline) {
+            await fetchAnimeThemes();
+            console.log("Using online clips");
+        } else {
+            videoClips = {...fallbackClips};
+            console.log("Using local clips");
+        }
+        return true;
+    } catch (error) {
+        console.error("Failed to load clips:", error);
+        videoClips = {...fallbackClips};
+        return false;
+    }
+}
+
+// Clip source toggle handler
+clipSourceButton.addEventListener("click", async () => {
+    clipSourceButton.disabled = true;
+    clipSourceButton.innerHTML = '<span class="icon">⏳</span> Loading...';
+    
+    usingOnlineClips = !usingOnlineClips;
+    
+    try {
+        const success = await initClips(usingOnlineClips);
+        if (success) {
+            // Reset game state when switching sources
+            usedClips = [];
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            
+            // Update button text
+            clipSourceButton.innerHTML = 
+                usingOnlineClips ? 
+                '<span class="icon">💾</span> Use Local Clips' : 
+                '<span class="icon">🌐</span> Use Online Clips';
+            
+            // Load a new clip
+            loadRandomClip();
+        }
+    } catch (error) {
+        console.error("Failed to switch clip source:", error);
+    }
+
+    clipSourceButton.disabled = false;
+});
 
 // Debounce function to limit API calls
 let debounceTimeout;
@@ -161,33 +367,40 @@ videoElement.addEventListener("volumechange", updateVolumeIcon);
 
 // Function to play the next video in the list
 const loadRandomClip = () => {
-    const clipPaths = Object.keys(videoClips); // Get array of video paths
-
-    // Filter out used clips
-    const unusedClips = clipPaths.filter(path => !usedClips.includes(path));
-
-    if (unusedClips.length === 0) {
-        // Show the score popup instead of just a message
-        finalScoreDisplay.textContent = score;
-        scorePopup.classList.remove("hidden");
-        nextButton.classList.add("hidden"); // Hide the next button
-        submitButton.classList.add("hidden");
-        videoElement.pause();
+    // Ensure videoClips is loaded
+    if (Object.keys(videoClips).length === 0) {
+        console.error("No video clips loaded");
         return;
     }
 
-    // Select a random clip from only the unused ones
-    const randomIndex = Math.floor(Math.random() * unusedClips.length);
-    const selectedClip = unusedClips[randomIndex];
+    const clipPaths = Object.keys(videoClips);
+    const unusedClips = clipPaths.filter(path => !usedClips.includes(path));
 
+    if (unusedClips.length === 0) {
+        endGame();
+        return;
+    }
+
+    const selectedClip = unusedClips[Math.floor(Math.random() * unusedClips.length)];
     videoElement.src = selectedClip;
-    videoElement.style.filter = "blur(5px)"; // Reapply blue for the next clip
-
-    currentAccepedAnswers = videoClips[selectedClip].map(ans => ans.toLowerCase()); // Update accepted answers for the current video
-
-    // Add to used list
+    videoElement.style.filter = "blur(5px)";
+    
+    // Set the accepted answers for this clip
+    currentAccepedAnswers = videoClips[selectedClip].answers;
+    
+    // Optional: Log quality for debugging
+    console.log(`Loading: ${selectedClip} (${videoClips[selectedClip].quality})`);
+    
     usedClips.push(selectedClip);
 };
+
+function endGame() {
+    finalScoreDisplay.textContent = score;
+    scorePopup.classList.remove("hidden");
+    nextButton.classList.add("hidden");
+    submitButton.classList.add("hidden");
+    videoElement.pause();
+}
 
 // Event listener for the next button to load a new video
 nextButton.addEventListener("click", () => {
@@ -201,40 +414,44 @@ nextButton.addEventListener("click", () => {
 // submitGuess:
 //  function to submit the answer when called
 function submitGuess() {
-    // Only proceed if submit button is visible
-    if (submitButton.classList.contains("hidden")) {
-        return;
-    }
+    if (submitButton.classList.contains("hidden")) return;
 
-    const userGuess = guessInput.value.trim().toLowerCase(); // Get the user's guess and convert to lowercase
-
+    const userGuess = guessInput.value.trim().toLowerCase();
+    
     if (userGuess === "") {
-        // Show popup message
-        popupMessage.classList.remove("hidden");
-
-        // Hide it after 2 seconds
-        setTimeout(() => {
-            popupMessage.classList.add("hidden");
-        }, 2000);
+        showPopupMessage("Please enter your guess");
         return;
     }
 
-    // Pause the video when submitting a guess
     videoElement.pause();
 
-    if (currentAccepedAnswers.includes(userGuess)) {
-        result.textContent = "Correct! 🎉";
-        result.style.color = "lightgreen";
-        videoElement.style.filter = "none"; // Remove blur on correct answer
-        score++; // Increment score
-        scoreDisplay.textContent = `Score: ${score}`; // Update score display
-        submitButton.classList.add("hidden"); // Hide the hidden button
-        nextButton.classList.remove("hidden"); // Show the next button
-    }
-    else {
+    // Check if any of the accepted answers match
+    const isCorrect = currentAccepedAnswers.some(answer => 
+        answer.toLowerCase() === userGuess
+    );
+
+    if (isCorrect) {
+        handleCorrectGuess();
+    } else {
         result.textContent = "Incorrect! Try again.";
         result.style.color = "red";
     }
+}
+
+function handleCorrectGuess() {
+    result.textContent = "Correct! 🎉";
+    result.style.color = "lightgreen";
+    videoElement.style.filter = "none";
+    score++;
+    scoreDisplay.textContent = `Score: ${score}`;
+    submitButton.classList.add("hidden");
+    nextButton.classList.remove("hidden");
+}
+
+function showPopupMessage(message) {
+    popupMessage.textContent = message;
+    popupMessage.classList.remove("hidden");
+    setTimeout(() => popupMessage.classList.add("hidden"), 2000);
 } 
 
 // submitButton event listener calls submitGuess
@@ -355,10 +572,68 @@ function restartVideo() {
 restartVideoButton.addEventListener("click", restartVideo);
 
 // function for starting the game
-function startGame() {
+async function startGame() {
     introPopup.classList.add("hidden");
-    
+
+    // Initialize with local clips
+    usingOnlineClips = false;
+    await initClips(false);
+    clipSourceButton.innerHTML = '<span class="icon">🌐</span> Use Online Database';
+
+    // Reset Game state
+    usedClips = []; // Reset used Clips
+    score = 0;
+    scoreDisplay.textContent = `Score: ${score}`;
+    scorePopup.classList.add("hidden");
+
+
     loadRandomClip(); // Initialize game
 }
 
-startGameBtn.addEventListener("click", startGame);
+startGameBtn.addEventListener("click", async () => {
+    try {
+        await initClips(); // Wait for clips to load
+        startGame();
+    } catch (error) {
+        console.error("Failed to initialize: ", error);
+        // Fallback to local clips
+        videoClips = {...fallbackClips};
+        startGame();
+    }
+});
+
+// Initialize the game properly
+async function initializeGame() {
+    startGameBtn.disabled = true;
+    startGameBtn.textContent = "Loading...";
+    
+    // Initialize with local clips by default
+    await initClips(false);
+    
+    startGameBtn.disabled = false;
+    startGameBtn.textContent = "Start Game";
+    startGameBtn.addEventListener("click", startGame);
+    
+    // Debug output
+    console.log("Initialized with", Object.keys(videoClips).length, "clips");
+}
+
+// Start initialization when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeGame);
+
+// Save preference
+localStorage.setItem('preferredClipSource', usingOnlineClips ? 'online' : 'local');
+
+// Load preference
+const preferredSource = localStorage.getItem('preferredClipSource');
+if (preferredSource === 'online') {
+    // Initialize with online clips
+}
+
+function updateSourceIndicator() {
+    const indicator = document.getElementById('source-indicator');
+    indicator.textContent = usingOnlineClips ? 
+        "Source: Online (AnimeThemes.moe)" : 
+        "Source: Local Clips";
+    indicator.style.color = usingOnlineClips ? "lightgreen" : "orange";
+}

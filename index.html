@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <!-- Intro Popup -->
     <div id="intro-popup" class="popup">
       <div class="popup-content">
         <h2>How to Play</h2>
@@ -20,19 +21,41 @@
       </div>
     </div>
 
-    <h1>Guess the Anime</h1>
-    <h3>Guess the anime based on the opening</h3>
+    <!-- Header -->
+    <header>
+      <h1>Guess the Anime</h1>
+      <h3>Guess the anime based on the opening</h3>
+    </header>
 
+    <!-- Game Container -->
     <div class="game-container">
       <video id="anime-video" controls></video>
 
+      <div class="input-row">
+        <div class="input-and-suggestions">
+          <input
+            type="text"
+            id="guess-input"
+            placeholder="Enter your guess here"
+            autocomplete="off"
+          />
+          <ul id="suggestions" class="hidden"></ul>
+        </div>
+      </div>
+
       <div class="actions">
-        <button id="submit-btn">Submit Guess</button>
-        <button id="next-btn" class="hidden">Next Video</button>
+        <div class="button-stack">
+          <button id="submit-btn">Submit Guess</button>
+          <button id="next-btn" class="hidden">Next Video</button>
+        </div>
         <span id="score">Score: 0</span>
+        <button id="clip-source-btn" class="text-icon-btn">
+          <span class="icon">🌐</span> Use Online Database
+        </button>
       </div>
     </div>
 
+    <!-- Media Controls -->
     <div class="media-controls">
       <button id="play-pause-btn" class="control-btn">
         <span class="icon">⏸</span>
@@ -55,18 +78,7 @@
       </div>
     </div>
 
-    <div class="input-row">
-      <div class="input-and-suggestions">
-        <input
-          type="text"
-          id="guess-input"
-          placeholder="Enter your guess here"
-          autocomplete="off"
-        />
-        <ul id="suggestions" class="hidden"></ul>
-      </div>
-    </div>
-
+    <!-- Score and Result Popups -->
     <div class="input-wrapper">
       <div id="score-popup" class="hidden">
         <div class="popup-content">

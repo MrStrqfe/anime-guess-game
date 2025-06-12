@@ -43,7 +43,7 @@ const videoClips = {
     "videos/anime9.mp4": ["Hunter x Hunter", "Hunter Hunter"],
     "videos/anime10.mp4": ["Sword Art Online", "Sword Art Online Alicization", "SAO"],
     "videos/anime11.mp4": ["The Beginning After the End", "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru?", "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru"],
-    //"videos/anime12.mp4",
+    "videos/anime12.mp4": ["Kaiju No. 8", "Kaiju No 8", "Kaiju", "Kaijuu 8-gou"],
     //"videos/anime13.mp4",
     //"videos/anime14.mp4",
     //"videos/anime15.mp4",
@@ -53,6 +53,23 @@ const videoClips = {
     //"videos/anime19.mp4",
     //"videos/anime20.mp4",
 };
+
+// const videoClips = {};
+
+// async function initClips() {
+//     try {
+//         await fetchAnimeThemes(); // Try AnimeThemes first
+//         if (Object.keys(videoClips).length < 50) {
+//             await fetchPopularAnimeOpenings(); // Fallback to Youtube
+//         }
+//     }
+//     catch (e) {
+//         videoClips = {...fallbackClips}; // Use local clips if API fails
+//     }
+// }
+
+// // Using AnimeThemes.moe API
+// async function fetchAnimeThemes
 
 // Debounce function to limit API calls
 let debounceTimeout;

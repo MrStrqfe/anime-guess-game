@@ -5,38 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Guess the Anime</title>
     <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
   </head>
   <body>
+    <!-- Particles Background -->
+    <div id="particles-js"></div>
+
     <!-- Intro Popup -->
     <div id="intro-popup" class="popup">
-      <div class="popup-content">
-        <h2>How to Play</h2>
-        <ol>
-          <li>Watch the blurred anime opening</li>
-          <li>Guess which anime it's from</li>
-          <li>Submit your answer</li>
-          <li>Correct guesses reveal the video and earn points!</li>
+      <div class="popup-content anime-popup">
+        <div class="popup-header">
+          <h2>How to Play <i class="fas fa-gamepad"></i></h2>
+        </div>
+        <ol class="instructions">
+          <li><i class="fas fa-eye"></i> Watch the blurred anime opening</li>
+          <li><i class="fas fa-question"></i> Guess which anime it's from</li>
+          <li><i class="fas fa-paper-plane"></i> Submit your answer</li>
+          <li>
+            <i class="fas fa-star"></i> Correct guesses reveal the video and
+            earn points!
+          </li>
+          <li>
+            <i class="fas fa-exclamation"></i> You get 3 guesses per video!
+          </li>
         </ol>
-        <button id="start-game-btn" class="start-btn">Start Game</button>
+        <button id="start-game-btn" class="start-btn neon-btn">
+          <span>Start Game</span>
+          <i class="fas fa-play"></i>
+        </button>
       </div>
     </div>
 
     <!-- Header -->
-    <header>
-      <h1>Guess the Anime</h1>
-      <h3>Guess the anime based on the opening</h3>
+    <header class="anime-header">
+      <h1><span class="gradient-text">Guess the Anime</span></h1>
+      <h3>Can you recognize the anime from its opening?</h3>
+      <div class="header-decoration">
+        <div class="decoration-item"></div>
+        <div class="decoration-item"></div>
+        <div class="decoration-item"></div>
+      </div>
     </header>
 
     <!-- Game Container -->
     <div class="game-container">
-      <video id="anime-video" controls></video>
+      <div class="video-wrapper">
+        <video id="anime-video" controls></video>
+        <div class="video-overlay"></div>
+      </div>
 
       <div class="input-row">
         <div class="input-and-suggestions">
           <input
             type="text"
             id="guess-input"
-            placeholder="Enter your guess here"
+            placeholder="Enter anime title here..."
             autocomplete="off"
           />
           <ul id="suggestions" class="hidden"></ul>
@@ -44,56 +74,116 @@
       </div>
 
       <div class="actions">
-        <div class="button-stack">
-          <button id="submit-btn">Submit Guess</button>
-          <button id="next-btn" class="hidden">Next Video</button>
+        <div class="stats-row">
+          <div class="score-display">
+            <i class="fas fa-trophy"></i>
+            <span id="score">0</span>
+          </div>
+          <div id="guesses-display" class="guesses-display">
+            <i class="fas fa-lightbulb"></i>
+            <span id="guesses-count">3</span>/3
+          </div>
         </div>
-        <span id="score">Score: 0</span>
+
+        <div class="button-stack">
+          <button id="submit-btn" class="action-btn submit-btn">
+            <i class="fas fa-check"></i> Submit
+          </button>
+          <button id="next-btn" class="action-btn next-btn hidden">
+            <i class="fas fa-forward"></i> Next
+          </button>
+        </div>
+
         <button id="clip-source-btn" class="text-icon-btn">
-          <span class="icon">🌐</span> Use Online Database
+          <i class="fas fa-globe"></i> Use Online Database
         </button>
       </div>
-    </div>
 
-    <!-- Media Controls -->
-    <div class="media-controls">
-      <button id="play-pause-btn" class="control-btn">
-        <span class="icon">⏸</span>
-      </button>
-      <button id="reset-video-btn" class="control-btn">
-        <span class="icon">↻</span>
-      </button>
-      <div class="volume-control">
-        <button id="mute-btn" class="control-btn">
-          <span class="volume-icon">🔊</span>
+      <!-- Media Controls -->
+      <div class="media-controls">
+        <button id="play-pause-btn" class="control-btn play-btn">
+          <i class="fas fa-pause icon"></i>
         </button>
-        <input
-          type="range"
-          id="volume-slider"
-          min="0"
-          max="1"
-          step="0.01"
-          value="1"
-        />
+        <button id="reset-video-btn" class="control-btn">
+          <i class="fas fa-redo"></i>
+        </button>
+        <div class="volume-control">
+          <button id="mute-btn" class="control-btn">
+            <i class="fas fa-volume-up"></i>
+          </button>
+          <input
+            type="range"
+            id="volume-slider"
+            min="0"
+            max="1"
+            step="0.01"
+            value="1"
+          />
+        </div>
       </div>
     </div>
 
     <!-- Score and Result Popups -->
     <div class="input-wrapper">
-      <div id="score-popup" class="hidden">
-        <div class="popup-content">
-          <h2>Game Over!</h2>
-          <p>Your Score was <span id="final-score">0</span></p>
-          <button id="play-again-btn">Play Again</button>
-        </div>
-      </div>
-
       <div id="popup-message" class="hidden">
-        Please enter your guess before clicking next
+        <i class="fas fa-exclamation-circle"></i> Please enter your guess before
+        clicking next
       </div>
       <p id="result"></p>
     </div>
 
+    <!-- Correct Guess Popup -->
+    <div id="correct-guess-popup" class="popup hidden">
+      <div class="popup-content correct-popup">
+        <div class="popup-header">
+          <h2>Correct! <i class="fas fa-check-circle"></i></h2>
+        </div>
+        <div class="popup-body">
+          <div class="confetti-container"></div>
+          <p>You guessed it right!</p>
+          <p class="anime-title-reveal">
+            It was <span id="revealed-anime-title"></span>
+          </p>
+          <div class="score-added">+1 <i class="fas fa-star"></i></div>
+        </div>
+        <div class="popup-footer">
+          <button id="continue-btn" class="neon-btn continue-btn">
+            <span>Continue</span>
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incorrect Guess Popup -->
+    <div id="incorrect-guess-popup" class="incorrect-popup hidden">
+      Incorrect Guess
+    </div>
+
+    <!-- Game Over Popup -->
+    <div id="score-popup" class="popup hidden">
+      <div class="popup-content anime-popup">
+        <div class="popup-header">
+          <h2>Game Over! <i class="fas fa-flag-checkered"></i></h2>
+        </div>
+        <div class="score-result">
+          <p>Your Score</p>
+          <div class="final-score-display">
+            <span id="final-score">0</span> /
+            <span id="total-questions">10</span>
+          </div>
+          <div class="accuracy-display">
+            Accuracy: <span id="accuracy">0%</span>
+          </div>
+        </div>
+        <button id="play-again-btn" class="neon-btn">
+          <span>Play Again</span>
+          <i class="fas fa-redo"></i>
+        </button>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

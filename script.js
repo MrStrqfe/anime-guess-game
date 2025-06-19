@@ -16,9 +16,8 @@ const restartVideoButton = document.getElementById("reset-video-btn");
 const introPopup = document.getElementById("intro-popup");
 const startGameBtn = document.getElementById("start-game-btn");
 const clipSourceButton = document.getElementById("clip-source-btn");
-const playIcon = "▶";
-const pauseIcon = "⏸";
-
+const incorrectGuessPopup = document.getElementById("incorrect-guess-popup");
+const remainingGuessesCount = document.getElementById("remaining-guesses-count");
 
 //let currentAnimeTitle = ""; // Variable to store the current anime title
 let currentAccepedAnswers = []; // Variable to store accepted answers for the current video
@@ -27,6 +26,11 @@ let usedClips = []; // Array to keep track of used video clips
 let isMuted = false;
 let lastVolume = 1;
 let usingOnlineClips = false;
+let remainingGuesses = 3;
+let maxGuesses = 3;
+let currentClipUrl = "";
+let questionsAnswered = 0;
+let totalQuestions = 10;
 
 // Set initial volume
 videoElement.volume = 1;
@@ -72,7 +76,7 @@ const fallbackClips = {
         quality: "480p"
     },
     "videos/anime10.mp4": {
-        answers: ["Sword Art Online", "Sword Art Online Alicization", "SAO"],
+        answers: ["Sword Art Online", "Sword Art Online: Alicization","Sword Art Online Alicization", "SAO"],
         quality: "480p"
     },
     "videos/anime11.mp4": {
@@ -367,6 +371,9 @@ videoElement.addEventListener("volumechange", updateVolumeIcon);
 
 // Function to play the next video in the list
 const loadRandomClip = () => {
+    // Reset guesses for new clip
+    remainingGuesses = maxGuesses;
+
     // Ensure videoClips is loaded
     if (Object.keys(videoClips).length === 0) {
         console.error("No video clips loaded");
@@ -382,20 +389,47 @@ const loadRandomClip = () => {
     }
 
     const selectedClip = unusedClips[Math.floor(Math.random() * unusedClips.length)];
+    currentClipUrl = selectedClip;
     videoElement.src = selectedClip;
     videoElement.style.filter = "blur(5px)";
     
     // Set the accepted answers for this clip
     currentAccepedAnswers = videoClips[selectedClip].answers;
     
-    // Optional: Log quality for debugging
-    console.log(`Loading: ${selectedClip} (${videoClips[selectedClip].quality})`);
+    // Update UI to show remaining guesses
+    updateGuessesDisplay();
     
     usedClips.push(selectedClip);
 };
 
+const updateGuessesDisplay = () => {
+    const guessesElement = document.getElementById("guesses-display");
+    if (guessesElement) {
+        guessesElement.textContent = `Guesses remaining: ${remainingGuesses}`;
+
+        // Visual feedback based on remaining guesses
+        if (remainingGuesses === 2) {
+            guessesElement.style.color = "#FFA500"; // Orange
+        }
+        else if (remainingGuesses === 1) {
+            guessesElement.style.color = "#FF4500"; // Red-Orange
+        }
+        else {
+            guessesElement.style.color = "#4CAF50"; // Green
+        }
+    }
+}
+
 function endGame() {
+    // Calculate accuracy
+    const accuracy = Math.round((score / totalQuestions) * 100);
+    
+    // Update the score popup content
     finalScoreDisplay.textContent = score;
+    document.getElementById("total-questions").textContent = totalQuestions;
+    document.getElementById("accuracy").textContent = `${accuracy}%`;
+    
+    // Show the score popup
     scorePopup.classList.remove("hidden");
     nextButton.classList.add("hidden");
     submitButton.classList.add("hidden");
@@ -404,6 +438,7 @@ function endGame() {
 
 // Event listener for the next button to load a new video
 nextButton.addEventListener("click", () => {
+    document.getElementById("answer-popup").classList.add("hidden");
     loadRandomClip();
     guessInput.value = ""; // Clear the input field
     nextButton.classList.add("hidden"); // Hide the next button again
@@ -433,19 +468,215 @@ function submitGuess() {
     if (isCorrect) {
         handleCorrectGuess();
     } else {
-        result.textContent = "Incorrect! Try again.";
-        result.style.color = "red";
+        remainingGuesses--;
+        updateGuessesDisplay();
+
+        if (remainingGuesses <= 0) {
+            handleNoGuessesLeft();
+        } else {
+            showIncorrectGuessPopup();
+        }
     }
 }
 
+function showIncorrectGuessPopup() {
+  const popup = document.getElementById("incorrect-guess-popup");
+  
+  // Reset animation by cloning and replacing the element
+  const newPopup = popup.cloneNode(true);
+  popup.parentNode.replaceChild(newPopup, popup);
+  
+  // Show the popup
+  newPopup.classList.remove("hidden");
+  
+  // Hide after 2 seconds (matches animation duration)
+  setTimeout(() => {
+    newPopup.classList.add("hidden");
+  }, 2000);
+  
+  // Clear the input and focus it for the next guess
+  guessInput.value = "";
+  guessInput.focus();
+}
+
+// Add this function to handle when guesses run out
+function handleNoGuessesLeft() {
+    // Reveal the video
+    videoElement.style.filter = "none";
+    questionsAnswered++;
+    
+    // Show the correct answer in a styled popup
+    const popup = document.getElementById("correct-guess-popup");
+    const revealedTitle = document.getElementById("revealed-anime-title");
+    const continueBtn = document.getElementById("continue-btn");
+    const header = popup.querySelector(".popup-header h2");
+    const scoreAdded = popup.querySelector(".score-added");
+    const popupBody = popup.querySelector(".popup-body p");
+    
+    // Customize for wrong answer
+    popup.classList.add("wrong-answer");
+    header.innerHTML = 'Oops! <i class="fas fa-times-circle"></i>';
+    header.style.color = "var(--danger)";
+    scoreAdded.style.display = "none";
+    popupBody.textContent = "The correct answer was:";
+    revealedTitle.textContent = currentAccepedAnswers[0];
+    
+    // Show the popup
+    popup.classList.remove("hidden");
+    
+    // Disable further guessing
+    submitButton.classList.add("hidden");
+    
+    // Clear any previous event listeners to avoid duplicates
+    continueBtn.replaceWith(continueBtn.cloneNode(true));
+    const newContinueBtn = document.getElementById("continue-btn");
+    
+    // Continue button functionality
+    newContinueBtn.addEventListener("click", () => {
+        popup.classList.add("hidden");
+        popup.classList.remove("wrong-answer");
+        header.innerHTML = 'Correct! <i class="fas fa-check-circle"></i>';
+        header.style.color = "var(--success)";
+        popupBody.textContent = "You guessed it right!";
+        scoreAdded.style.display = "block";
+        
+        if (questionsAnswered >= totalQuestions) {
+            endGame();
+        } else {
+            loadRandomClip();
+            guessInput.value = "";
+            result.textContent = "";
+            submitButton.classList.remove("hidden");
+        }
+    });
+    
+    // Also allow pressing Enter to continue
+    const handleKeyPress = function(e) {
+        if (e.code === "Enter" && !popup.classList.contains("hidden")) {
+            document.removeEventListener("keydown", handleKeyPress);
+            popup.classList.add("hidden");
+            popup.classList.remove("wrong-answer");
+            header.innerHTML = 'Correct! <i class="fas fa-check-circle"></i>';
+            header.style.color = "var(--success)";
+            popupBody.textContent = "You guessed it right!";
+            scoreAdded.style.display = "block";
+            
+            if (questionsAnswered >= totalQuestions) {
+                endGame();
+            } else {
+                loadRandomClip();
+                guessInput.value = "";
+                result.textContent = "";
+                submitButton.classList.remove("hidden");
+            }
+        }
+    };
+    
+    document.addEventListener("keydown", handleKeyPress, { once: true });
+}
+
 function handleCorrectGuess() {
-    result.textContent = "Correct! 🎉";
-    result.style.color = "lightgreen";
+    // Hide incorrect popup if it's showing
+    incorrectGuessPopup.classList.add("hidden");
+
+    // Show the correct guess popup
+    const popup = document.getElementById("correct-guess-popup");
+    const revealedTitle = document.getElementById("revealed-anime-title");
+    const continueBtn = document.getElementById("continue-btn");
+    const popupBody = popup.querySelector(".popup-body p");
+    
+    // Set the revealed anime title
+    popupBody.textContent = "You guessed it right!";
+    revealedTitle.textContent = currentAccepedAnswers[0];
+    
+    // Create confetti effect
+    createConfetti();
+    
+    // Show the popup
+    popup.classList.remove("hidden");
+    
+    // Update game state
     videoElement.style.filter = "none";
     score++;
-    scoreDisplay.textContent = `Score: ${score}`;
+    questionsAnswered++;
+    scoreDisplay.textContent = score;
     submitButton.classList.add("hidden");
-    nextButton.classList.remove("hidden");
+    
+    // Clear any previous event listeners to avoid duplicates
+    continueBtn.replaceWith(continueBtn.cloneNode(true));
+    const newContinueBtn = document.getElementById("continue-btn");
+    
+    // Continue button functionality
+    newContinueBtn.addEventListener("click", () => {
+        popup.classList.add("hidden");
+        if (questionsAnswered >= totalQuestions) {
+            endGame();
+        } else {
+            loadRandomClip();
+            guessInput.value = "";
+            result.textContent = "";
+            submitButton.classList.remove("hidden");
+        }
+    });
+    
+    // Also allow pressing Enter to continue
+    const handleKeyPress = function(e) {
+        if (e.code === "Enter" && !popup.classList.contains("hidden")) {
+            document.removeEventListener("keydown", handleKeyPress);
+            popup.classList.add("hidden");
+            if (questionsAnswered >= totalQuestions) {
+                endGame();
+            } else {
+                loadRandomClip();
+                guessInput.value = "";
+                result.textContent = "";
+                submitButton.classList.remove("hidden");
+            }
+        }
+    };
+    
+    document.addEventListener("keydown", handleKeyPress, { once: true });
+}
+
+function createConfetti() {
+    const container = document.querySelector(".confetti-container");
+    container.innerHTML = ""; // Clear previous confetti
+    
+    const colors = [
+        "var(--primary)", 
+        "var(--secondary)", 
+        "var(--accent)", 
+        "gold", 
+        "var(--success)"
+    ];
+    
+    // Create 50 pieces of confetti
+    for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement("div");
+        confetti.classList.add("confetti");
+        
+        // Random properties
+        const size = Math.random() * 10 + 5;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const left = Math.random() * 100;
+        const animationDuration = Math.random() * 3 + 2;
+        const delay = Math.random() * 2;
+        
+        // Apply styles
+        confetti.style.width = `${size}px`;
+        confetti.style.height = `${size}px`;
+        confetti.style.backgroundColor = color;
+        confetti.style.left = `${left}%`;
+        confetti.style.animationDuration = `${animationDuration}s`;
+        confetti.style.animationDelay = `${delay}s`;
+        
+        // Random shape
+        if (Math.random() > 0.5) {
+            confetti.style.borderRadius = "50%";
+        }
+        
+        container.appendChild(confetti);
+    }
 }
 
 function showPopupMessage(message) {
@@ -471,7 +702,8 @@ playAgainButton.addEventListener("click", () => {
     // Reset game state
     usedClips = [];
     score = 0;
-    scoreDisplay.textContent = `Score: ${score}`;
+    questionsAnswered = 0;
+    scoreDisplay.textContent = score;
 
     // Hide the popup
     scorePopup.classList.add("hidden");
@@ -484,8 +716,12 @@ playAgainButton.addEventListener("click", () => {
 });
 
 function updateButtonIcon() {
-    playPauseButton.querySelector(".icon").textContent =
-        videoElement.paused ? playIcon : pauseIcon;
+    const icon = playPauseButton.querySelector("i"); // Changed to look for the <i> element
+    if (icon) { // Add null check just in case
+        icon.className = videoElement.paused ? 
+            "fas fa-play icon" : 
+            "fas fa-pause icon";
+    }
 }
 
 // Initialize button state
@@ -583,9 +819,9 @@ async function startGame() {
     // Reset Game state
     usedClips = []; // Reset used Clips
     score = 0;
+    questionsAnswered = 0;
     scoreDisplay.textContent = `Score: ${score}`;
     scorePopup.classList.add("hidden");
-
 
     loadRandomClip(); // Initialize game
 }
@@ -604,22 +840,43 @@ startGameBtn.addEventListener("click", async () => {
 
 // Initialize the game properly
 async function initializeGame() {
-    startGameBtn.disabled = true;
-    startGameBtn.textContent = "Loading...";
-    
-    // Initialize with local clips by default
-    await initClips(false);
-    
-    startGameBtn.disabled = false;
-    startGameBtn.textContent = "Start Game";
-    startGameBtn.addEventListener("click", startGame);
-    
-    // Debug output
-    console.log("Initialized with", Object.keys(videoClips).length, "clips");
+    // Make sure the button exists
+    const startGameBtn = document.getElementById("start-game-btn");
+    if (!startGameBtn) {
+        console.error("Start game button not found!");
+        return;
+    }
+
+    // Create guesses display element if it doesn't exist
+    if (!document.getElementById("guesses-display")) {
+        const guessesDisplay = document.createElement("div");
+        guessesDisplay.id = "guesses-display";
+        guessesDisplay.style.margin = "10px 0";
+        guessesDisplay.style.fontWeight = "bold";
+        document.querySelector(".actions").prepend(guessesDisplay);
+    }
+
+    // Set up the click handler
+    startGameBtn.addEventListener("click", async () => {
+        console.log("Start button clicked"); // Debugging
+        try {
+            await initClips(false); // Use local clips by default
+            startGame();
+        } catch (error) {
+            console.error("Failed to initialize:", error);
+            // Fallback to local clips
+            videoClips = {...fallbackClips};
+            startGame();
+        }
+    });
+
+    console.log("Game initialization complete");
 }
 
 // Start initialization when DOM is ready
-document.addEventListener('DOMContentLoaded', initializeGame);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeGame();
+});
 
 // Save preference
 localStorage.setItem('preferredClipSource', usingOnlineClips ? 'online' : 'local');

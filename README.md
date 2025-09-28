@@ -62,7 +62,7 @@ anime-guess-game/
 ├── script.js # Core game logic, video management, user interaction\
 ├── styles.css # UI and layout styles\
 ├── videos/ # Local video clips used in the game\
-└── README.md # Documentation and development notes\
+└── README.md # Documentation and development notes
 
 
 ---

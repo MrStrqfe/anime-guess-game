@@ -58,11 +58,11 @@ An interactive web game that challenges users to identify anime series by watchi
 ## Project Structure
 
 anime-guess-game/
-├── index.html # Main HTML structure and instructions
-├── script.js # Core game logic, video management, user interaction
-├── styles.css # UI and layout styles
-├── videos/ # Local video clips used in the game
-└── README.md # Documentation and development notes
+├── index.html # Main HTML structure and instructions\
+├── script.js # Core game logic, video management, user interaction\
+├── styles.css # UI and layout styles\
+├── videos/ # Local video clips used in the game\
+└── README.md # Documentation and development notes\
 
 
 ---

@@ -58,10 +58,16 @@ An interactive web game that challenges users to identify anime series by watchi
 ## Project Structure
 
 anime-guess-game\
-├── index.html # Main HTML structure and instructions\
-├── script.js # Core game logic, video management, user interaction\
-├── styles.css # UI and layout styles\
-├── videos/ # Local video clips used in the game\
+├── index.html # Vite entry point\
+├── src/\
+│&nbsp;&nbsp;&nbsp;├── main.jsx # React entry point\
+│&nbsp;&nbsp;&nbsp;├── App.jsx # Top-level composition, video ref, keyboard shortcuts\
+│&nbsp;&nbsp;&nbsp;├── styles.css # UI and layout styles\
+│&nbsp;&nbsp;&nbsp;├── data/ # Local fallback clip/answer data\
+│&nbsp;&nbsp;&nbsp;├── api/ # AnimeThemes.moe and Jikan API calls\
+│&nbsp;&nbsp;&nbsp;├── hooks/ # Game state (score, guesses, rounds)\
+│&nbsp;&nbsp;&nbsp;└── components/ # UI components (video player, popups, controls, etc.)\
+├── public/videos/ # Local video clips used in the game\
 └── README.md # Documentation and development notes
 
 
@@ -69,11 +75,21 @@ anime-guess-game\
 
 ## Technologies Used
 
-- **HTML, CSS, JavaScript**: Core web technologies
+- **React** + **Vite**: UI and build tooling
 - Anime opening data fetched via public APIs:
-  - [AniList GraphQL](https://anilist.co/)
   - [AnimeThemes.moe API](https://animethemes.moe/)
   - [Jikan.moe API](https://jikan.moe/) (for autocomplete)
+
+---
+
+## Development
+
+```bash
+npm install
+npm run dev      # start the local dev server
+npm run build    # production build to dist/
+npm run preview  # preview the production build locally
+```
 
 ---
 

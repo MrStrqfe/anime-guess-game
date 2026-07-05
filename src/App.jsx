@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGameState, MAX_GUESSES, TOTAL_QUESTIONS } from "./hooks/useGameState";
+import { useAuth } from "./context/AuthContext";
+import { recordGame } from "./api/stats";
 import IntroPopup from "./components/IntroPopup";
 import Header from "./components/Header";
 import VideoPlayer from "./components/VideoPlayer";
@@ -11,12 +13,18 @@ import PopupMessage from "./components/PopupMessage";
 import IncorrectGuessPopup from "./components/IncorrectGuessPopup";
 import RoundResultPopup from "./components/RoundResultPopup";
 import ScorePopup from "./components/ScorePopup";
+import UserMenu from "./components/UserMenu";
+import AuthPopup from "./components/AuthPopup";
+import StatsPopup from "./components/StatsPopup";
 
 export default function App() {
   const { state, actions } = useGameState();
+  const { user, enabled: authEnabled } = useAuth();
   const videoRef = useRef(null);
   const guessInputRef = useRef(null);
   const [sourceLoading, setSourceLoading] = useState(false);
+  const [authPopupOpen, setAuthPopupOpen] = useState(false);
+  const [statsPopupOpen, setStatsPopupOpen] = useState(false);
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -44,6 +52,20 @@ export default function App() {
       video.removeEventListener("volumechange", handleVolumeChange);
     };
   }, []);
+
+  // Record the finished game to the signed-in player's profile, exactly once
+  // per gameOver (the ref guard keeps StrictMode's double-invoked effects and
+  // dependency changes from writing duplicates; it resets when a new game starts).
+  const recordedRef = useRef(false);
+  useEffect(() => {
+    if (state.phase !== "gameOver") {
+      recordedRef.current = false;
+      return;
+    }
+    if (recordedRef.current || !user || state.roundResults.length === 0) return;
+    recordedRef.current = true;
+    recordGame(state.roundResults).catch(console.error);
+  }, [state.phase, user, state.roundResults]);
 
   // Refocus the guess input whenever an incorrect-but-not-final guess is made
   useEffect(() => {
@@ -150,6 +172,11 @@ export default function App() {
 
       {state.phase === "intro" && <IntroPopup onStart={actions.startGame} />}
 
+      <UserMenu
+        onOpenAuth={() => setAuthPopupOpen(true)}
+        onOpenStats={() => setStatsPopupOpen(true)}
+      />
+
       <Header />
 
       <div className="game-container">
@@ -202,7 +229,12 @@ export default function App() {
         score={state.score}
         totalQuestions={TOTAL_QUESTIONS}
         onPlayAgain={actions.playAgain}
+        signedIn={Boolean(user)}
+        onOpenAuth={authEnabled ? () => setAuthPopupOpen(true) : null}
       />
+
+      <AuthPopup visible={authPopupOpen} onClose={() => setAuthPopupOpen(false)} />
+      <StatsPopup visible={statsPopupOpen} onClose={() => setStatsPopupOpen(false)} />
     </>
   );
 }

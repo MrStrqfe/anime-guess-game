@@ -1,3 +1,7 @@
 node_modules
 dist
+.claude/
 .vercel
+.env
+.env.*
+!.env.example

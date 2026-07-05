@@ -27,6 +27,7 @@ const initialState = {
   revealed: false,
   submitVisible: true,
   roundResult: null, // null | { correct: boolean }
+  roundResults: [], // per-round correctness for the current game, in order
   guessValue: "",
   incorrectToastTrigger: 0,
   validationTrigger: 0,
@@ -63,14 +64,14 @@ function reducer(state, action) {
   switch (action.type) {
     case "START_GAME": {
       return startRound(
-        { ...state, score: 0, questionsAnswered: 0, usingOnlineClips: false, phase: "playing" },
+        { ...state, score: 0, questionsAnswered: 0, roundResults: [], usingOnlineClips: false, phase: "playing" },
         fallbackClips,
         []
       );
     }
     case "SWITCH_SOURCE": {
       return startRound(
-        { ...state, score: 0, usingOnlineClips: action.usingOnlineClips },
+        { ...state, score: 0, roundResults: [], usingOnlineClips: action.usingOnlineClips },
         action.videoClips,
         []
       );
@@ -89,6 +90,7 @@ function reducer(state, action) {
         questionsAnswered: state.questionsAnswered + 1,
         submitVisible: false,
         roundResult: { correct: true },
+        roundResults: [...state.roundResults, true],
       };
     }
     case "SUBMIT_INCORRECT_RETRY": {
@@ -107,6 +109,7 @@ function reducer(state, action) {
         questionsAnswered: state.questionsAnswered + 1,
         submitVisible: false,
         roundResult: { correct: false },
+        roundResults: [...state.roundResults, false],
       };
     }
     case "CONTINUE": {
@@ -117,7 +120,7 @@ function reducer(state, action) {
     }
     case "PLAY_AGAIN": {
       return startRound(
-        { ...state, score: 0, questionsAnswered: 0, phase: "playing" },
+        { ...state, score: 0, questionsAnswered: 0, roundResults: [], phase: "playing" },
         state.videoClips,
         []
       );

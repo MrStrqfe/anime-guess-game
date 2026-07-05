@@ -1,4 +1,4 @@
-export default function ScorePopup({ visible, score, totalQuestions, onPlayAgain }) {
+export default function ScorePopup({ visible, score, totalQuestions, onPlayAgain, signedIn, onOpenAuth }) {
   const accuracy = Math.round((score / totalQuestions) * 100);
 
   return (
@@ -15,6 +15,19 @@ export default function ScorePopup({ visible, score, totalQuestions, onPlayAgain
             <span id="final-score">{score}</span> / <span id="total-questions">{totalQuestions}</span>
           </div>
           <div className="accuracy-display">Accuracy: <span id="accuracy">{accuracy}%</span></div>
+          {signedIn && (
+            <p className="save-stats-note">
+              <i className="fas fa-check"></i> Stats saved to your profile
+            </p>
+          )}
+          {!signedIn && onOpenAuth && (
+            <p className="save-stats-note">
+              <button type="button" className="auth-link-btn" onClick={onOpenAuth}>
+                Sign in
+              </button>{" "}
+              to save your stats
+            </p>
+          )}
         </div>
         <button id="play-again-btn" className="neon-btn" onClick={onPlayAgain}>
           <span>Play Again</span>

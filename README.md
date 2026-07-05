@@ -1,4 +1,4 @@
-# Anime Guess Game
+# AniBlur (Anime Guess Game)
 
 An interactive web game that challenges users to identify anime series by watching short, blurred opening video clips. Perfect for anime fans who want to test their knowledge and recognition skills!
 

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
+// Sign In / Sign Up popup. One form handles both modes (toggled by the link
+// at the bottom), plus Google/Discord OAuth buttons.
 export default function AuthPopup({ visible, onClose }) {
   const { signIn, signUp, signInWithProvider } = useAuth();
   const [mode, setMode] = useState("signin"); // 'signin' | 'signup'
@@ -11,6 +13,9 @@ export default function AuthPopup({ visible, onClose }) {
 
   const isSignup = mode === "signup";
 
+  // Submits the email/password form for whichever mode is active. On success
+  // the form is cleared and the popup closes; on failure the Supabase error
+  // is shown inline. `busy` disables the button to prevent double submits.
   async function handleSubmit(e) {
     e.preventDefault();
     if (busy) return;
@@ -29,6 +34,8 @@ export default function AuthPopup({ visible, onClose }) {
     }
   }
 
+  // Kicks off an OAuth sign-in; if it works the browser navigates away to
+  // the provider, so we only need to handle the error case here.
   async function handleProvider(provider) {
     setError("");
     try {

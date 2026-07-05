@@ -2,21 +2,28 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { fetchMyStats } from "../api/stats";
 
+// Average correct answers per game, one decimal place. "—" until the user
+// has played at least one game (also avoids dividing by zero).
 function formatAverage(stats) {
   if (!stats.games_played) return "—";
   return (stats.total_correct / stats.games_played).toFixed(1);
 }
 
+// Lifetime accuracy as a whole percentage, e.g. "73%". Same "—" guard as above.
 function formatAccuracy(stats) {
   if (!stats.total_answered) return "—";
   return `${Math.round((stats.total_correct / stats.total_answered) * 100)}%`;
 }
 
+// "My Stats" popup: fetches the signed-in user's profile row from Supabase
+// each time it opens and lays the numbers out in a card grid.
 export default function StatsPopup({ visible, onClose }) {
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
   const [error, setError] = useState("");
 
+  // Refetch on every open so the popup always shows the latest numbers
+  // (stats may have changed since the last time it was opened).
   useEffect(() => {
     if (!visible || !user) return;
     setStats(null);

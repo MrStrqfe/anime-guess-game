@@ -74,6 +74,9 @@ export default function App() {
     }
   }, [state.incorrectToastTrigger]);
 
+  // The next four handlers control the <video> element directly through its
+  // ref; the play/pause/volumechange listeners above then sync our UI state.
+
   function togglePlayPause() {
     const video = videoRef.current;
     if (!video) return;
@@ -81,6 +84,7 @@ export default function App() {
     else video.pause();
   }
 
+  // Restarts the clip from the beginning and resumes playback if it was paused.
   function handleRestart() {
     const video = videoRef.current;
     if (!video) return;
@@ -88,6 +92,8 @@ export default function App() {
     if (video.paused) video.play().catch(() => {});
   }
 
+  // Mutes/unmutes, remembering the volume from before muting so unmuting
+  // restores it instead of jumping back to full volume.
   function handleToggleMute() {
     const video = videoRef.current;
     if (!video) return;
@@ -100,6 +106,7 @@ export default function App() {
     }
   }
 
+  // Sets the volume from the slider; any manual volume change also unmutes.
   function handleVolumeChange(nextVolume) {
     const video = videoRef.current;
     if (!video) return;
@@ -107,6 +114,8 @@ export default function App() {
     video.muted = false;
   }
 
+  // Submits the current guess. Empty guesses just show a validation nudge;
+  // real ones pause the video and hand off to the game logic for scoring.
   function handleSubmit() {
     if (!state.submitVisible) return;
     const guess = state.guessValue.trim();
@@ -118,6 +127,8 @@ export default function App() {
     actions.submitGuess(guess);
   }
 
+  // Switches between local and online clips, showing a loading state on the
+  // button while the online library is being fetched.
   async function handleToggleSource() {
     setSourceLoading(true);
     await actions.toggleClipSource();

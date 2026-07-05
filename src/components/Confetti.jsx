@@ -8,7 +8,12 @@ const COLORS = [
   "var(--success)",
 ];
 
+// Celebration effect shown on a correct guess: 50 falling pieces with
+// randomized size, color, position, and timing (the animation itself lives
+// in CSS).
 export default function Confetti({ active }) {
+  // useMemo keeps the random values stable across re-renders, so the pieces
+  // are only re-rolled when `active` flips — not on every render.
   const pieces = useMemo(() => {
     if (!active) return [];
     return Array.from({ length: 50 }, (_, i) => ({

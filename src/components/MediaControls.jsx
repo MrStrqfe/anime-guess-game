@@ -1,9 +1,14 @@
+// Picks the speaker icon that matches the current audio state:
+// muted/silent, quiet (below half), or loud.
 function volumeIconClass(muted, volume) {
   if (muted || volume === 0) return "fas fa-volume-mute";
   if (volume < 0.5) return "fas fa-volume-down";
   return "fas fa-volume-up";
 }
 
+// Playback bar under the video: play/pause, restart, mute, and a volume
+// slider. Stateless — it renders the props and reports clicks back to App,
+// which owns the actual <video> element.
 export default function MediaControls({
   paused,
   muted,

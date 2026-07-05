@@ -1,3 +1,5 @@
+// "How to Play" popup shown before the first game. Start Game kicks off the
+// first round via onStart.
 export default function IntroPopup({ onStart }) {
   return (
     <div id="intro-popup" className="popup">

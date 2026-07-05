@@ -1,3 +1,6 @@
+// Looks up anime titles matching the user's partial input via the Jikan
+// (MyAnimeList) API. Used to power the autocomplete dropdown while typing.
+// Returns up to 5 unique titles, preferring the English title when one exists.
 export async function fetchSuggestions(query) {
   const response = await fetch(
     `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&type=tv&limit=5`

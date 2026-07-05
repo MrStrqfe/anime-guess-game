@@ -1,5 +1,8 @@
 import { useAuth } from "../context/AuthContext";
 
+// Best-effort friendly name for the signed-in user: OAuth profile name if
+// available, otherwise the part of their email before the @, otherwise a
+// generic fallback.
 function displayName(user) {
   return (
     user.user_metadata?.full_name ||
@@ -9,6 +12,9 @@ function displayName(user) {
   );
 }
 
+// Top-corner account area. Shows a Sign In button for guests, or the user's
+// name plus Stats/Sign Out buttons when signed in. Renders nothing while the
+// session is still loading or when Supabase isn't configured.
 export default function UserMenu({ onOpenAuth, onOpenStats }) {
   const { user, enabled, loading, signOut } = useAuth();
 

@@ -5,6 +5,8 @@ import { fetchAnimeThemes } from "../api/animeThemes";
 export const MAX_GUESSES = 3;
 export const TOTAL_QUESTIONS = 10;
 
+// Picks a random clip that hasn't been played yet this game.
+// Returns null when every clip has been used, which ends the game early.
 function pickNextClip(videoClips, usedClips) {
   const clipUrls = Object.keys(videoClips);
   const unusedClips = clipUrls.filter((url) => !usedClips.includes(url));
@@ -33,6 +35,9 @@ const initialState = {
   validationTrigger: 0,
 };
 
+// Sets up the next round: picks a fresh clip, resets the per-round fields
+// (guesses, input, reveal state), and marks the clip as used. If there are
+// no clips left it flips the game into the gameOver phase instead.
 function startRound(state, videoClips, usedClips) {
   const next = pickNextClip(videoClips, usedClips);
   if (!next) {
@@ -60,6 +65,10 @@ function startRound(state, videoClips, usedClips) {
   };
 }
 
+// Central game state machine. Every gameplay event (starting a game,
+// submitting a guess, moving to the next round, ...) is an action handled
+// here, so all the rules live in one place instead of scattered across
+// components.
 function reducer(state, action) {
   switch (action.type) {
     case "START_GAME": {
@@ -130,6 +139,9 @@ function reducer(state, action) {
   }
 }
 
+// The hook components actually use. Wraps the reducer and exposes the game
+// state plus a set of named actions, so components call e.g.
+// actions.submitGuess(...) instead of dispatching raw action objects.
 export function useGameState() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
@@ -137,6 +149,9 @@ export function useGameState() {
     dispatch({ type: "START_GAME" });
   }, []);
 
+  // Switches between the bundled local clips and the AnimeThemes.moe online
+  // library. Fetching the online list can fail (network, API down), so this
+  // returns false on failure and leaves the current game untouched.
   const toggleClipSource = useCallback(async () => {
     const goingOnline = !state.usingOnlineClips;
     try {
@@ -153,6 +168,9 @@ export function useGameState() {
     dispatch({ type: "SET_GUESS", value });
   }, []);
 
+  // Checks a guess against the accepted answers for the current clip
+  // (case-insensitive) and routes to the right outcome: correct, wrong but
+  // with guesses left, or wrong on the last guess (which reveals the answer).
   const submitGuess = useCallback(
     (guess) => {
       const isCorrect = state.currentAcceptedAnswers.some(

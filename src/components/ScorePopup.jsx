@@ -1,3 +1,5 @@
+// Game-over popup with the final score and accuracy. Signed-in players see a
+// "stats saved" note; guests get a sign-in prompt (when auth is configured).
 export default function ScorePopup({ visible, score, totalQuestions, onPlayAgain, signedIn, onOpenAuth }) {
   const accuracy = Math.round((score / totalQuestions) * 100);
 

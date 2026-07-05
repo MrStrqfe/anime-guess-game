@@ -1,3 +1,4 @@
+// Static page header: title, tagline, and decorative dots. No props or state.
 export default function Header() {
   return (
     <header className="anime-header">

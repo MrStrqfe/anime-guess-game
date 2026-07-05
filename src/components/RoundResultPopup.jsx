@@ -1,5 +1,7 @@
 import Confetti from "./Confetti";
 
+// End-of-round popup: green "Correct!" with confetti, or red "Oops!" with
+// the right answer. Hidden while `result` is null (i.e. mid-round).
 export default function RoundResultPopup({ result, revealedTitle, onContinue }) {
   const correct = result?.correct ?? true;
   const hidden = result === null;

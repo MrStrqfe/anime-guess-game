@@ -1,3 +1,6 @@
+// The bundled clip library, used by default and whenever the online source
+// is unavailable. Maps each video path (under public/) to its accepted
+// answers; guesses are matched against `answers` case-insensitively.
 export const fallbackClips = {
   "videos/anime1.mp4": {
     answers: ["Attack on Titan", "Shingeki no Kyojin"],

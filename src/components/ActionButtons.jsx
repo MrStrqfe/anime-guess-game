@@ -1,3 +1,5 @@
+// The Submit button plus the local/online clip-source toggle. Purely
+// presentational — the actual submit and source-switch logic lives in App.
 export default function ActionButtons({
   submitVisible,
   onSubmit,

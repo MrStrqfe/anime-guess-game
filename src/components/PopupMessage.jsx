@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 
+// A small toast that shows `message` for 2 seconds and hides itself.
+// `trigger` is a counter, not a boolean: the parent bumps it each time the
+// toast should appear, which also restarts the timer if it's already showing.
 export default function PopupMessage({ trigger, message }) {
   const [visible, setVisible] = useState(false);
 

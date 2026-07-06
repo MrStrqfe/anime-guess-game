@@ -11,32 +11,32 @@ export default function RoundResultPopup({ result, revealedTitle, onContinue }) 
       id="correct-guess-popup"
       className={`popup ${hidden ? "hidden" : ""} correct-popup ${correct ? "" : "wrong-answer"}`}
     >
-      <div className="popup-content correct-popup">
-        <div className="popup-header">
-          <h2 style={{ color: correct ? "var(--success)" : "var(--danger)" }}>
-            {correct ? (
-              <>
-                Correct! <i className="fas fa-check-circle"></i>
-              </>
-            ) : (
-              <>
-                Oops! <i className="fas fa-times-circle"></i>
-              </>
-            )}
-          </h2>
+      <div className="popup-content result-card">
+        {/* Confetti rains over the whole card, behind the content */}
+        <Confetti active={!hidden && correct} />
+
+        <div className="result-badge">
+          <i className={`fas ${correct ? "fa-check" : "fa-times"}`}></i>
         </div>
+
+        <div className="popup-header">
+          <h2>{correct ? "Correct!" : "Oops!"}</h2>
+        </div>
+
         <div className="popup-body">
-          <Confetti active={!hidden && correct} />
-          <p>{correct ? "You guessed it right!" : "The correct answer was:"}</p>
-          <p className="anime-title-reveal">
-            It was <span id="revealed-anime-title">{revealedTitle}</span>
+          <p className="result-subtitle">
+            {correct ? "You guessed it right!" : "The correct answer was:"}
           </p>
+          <div className="anime-title-reveal">
+            <span id="revealed-anime-title">{revealedTitle}</span>
+          </div>
           {correct && (
             <div className="score-added">
               +1 <i className="fas fa-star"></i>
             </div>
           )}
         </div>
+
         <div className="popup-footer">
           <button id="continue-btn" className="neon-btn continue-btn" onClick={onContinue}>
             <span>Continue</span>

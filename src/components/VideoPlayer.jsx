@@ -10,7 +10,6 @@ const VideoPlayer = forwardRef(function VideoPlayer({ src, revealed }, ref) {
         id="anime-video"
         ref={ref}
         src={src}
-        controls
         style={{ filter: revealed ? "none" : "blur(5px)" }}
       ></video>
       <div className="video-overlay"></div>

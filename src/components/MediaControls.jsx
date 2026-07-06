@@ -40,6 +40,13 @@ export default function MediaControls({
           onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
         />
       </div>
+      {/* Desktop-only cheat sheet for the global shortcuts wired up in App */}
+      <div className="kbd-hints" aria-hidden="true">
+        <span><kbd>Space</kbd> play</span>
+        <span><kbd>R</kbd> restart</span>
+        <span><kbd>M</kbd> mute</span>
+        <span><kbd>←</kbd><kbd>→</kbd> volume</span>
+      </div>
     </div>
   );
 }

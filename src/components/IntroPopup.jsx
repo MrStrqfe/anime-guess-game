@@ -1,6 +1,7 @@
-// "How to Play" popup shown before the first game. Start Game kicks off the
-// first round via onStart.
-export default function IntroPopup({ onStart }) {
+// "How to Play" popup shown before the first game, and reopenable later via
+// the help button. `resume` swaps the button label when a game is already
+// running (closing just returns to it instead of starting a new one).
+export default function IntroPopup({ onStart, resume = false }) {
   return (
     <div id="intro-popup" className="popup">
       <div className="popup-content anime-popup">
@@ -28,8 +29,8 @@ export default function IntroPopup({ onStart }) {
           </li>
         </ol>
         <button id="start-game-btn" className="start-btn neon-btn" onClick={onStart}>
-          <span>Start Game</span>
-          <i className="fas fa-play"></i>
+          <span>{resume ? "Back to Game" : "Start Game"}</span>
+          <i className={`fas ${resume ? "fa-arrow-right" : "fa-play"}`}></i>
         </button>
       </div>
     </div>

@@ -29,8 +29,30 @@ export default function App() {
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
   const lastVolumeRef = useRef(1);
+  // How to Play only auto-opens until the player has started a game once
+  // (persisted per browser); afterwards it's reachable via the "?" button.
+  const [introOpen, setIntroOpen] = useState(
+    () => localStorage.getItem("intro-seen") !== "true"
+  );
 
-  // Keep local playback UI state in sync with the underlying <video> element
+  // Returning players skip the intro and land directly in a running game.
+  useEffect(() => {
+    if (localStorage.getItem("intro-seen") === "true") {
+      actions.startGame();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Closes the How to Play popup; on a first visit this also starts the game.
+  function handleIntroClose() {
+    localStorage.setItem("intro-seen", "true");
+    setIntroOpen(false);
+    if (state.phase === "intro") actions.startGame();
+  }
+
+  // Keep local playback UI state in sync with the underlying <video> element.
+  // Volume and mute are persisted to localStorage so they survive refreshes
+  // (per browser/device).
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -40,9 +62,17 @@ export default function App() {
     const handleVolumeChange = () => {
       setMuted(video.muted);
       setVolume(video.volume);
+      localStorage.setItem("player-volume", String(video.volume));
+      localStorage.setItem("player-muted", String(video.muted));
     };
 
-    video.volume = 1;
+    // Restore last session's audio settings; fall back to full volume.
+    const savedVolume = parseFloat(localStorage.getItem("player-volume"));
+    video.volume = Number.isFinite(savedVolume)
+      ? Math.min(Math.max(savedVolume, 0), 1)
+      : 1;
+    video.muted = localStorage.getItem("player-muted") === "true";
+    if (video.volume > 0) lastVolumeRef.current = video.volume;
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
     video.addEventListener("volumechange", handleVolumeChange);
@@ -181,7 +211,19 @@ export default function App() {
     <>
       <div id="particles-js"></div>
 
-      {state.phase === "intro" && <IntroPopup onStart={actions.startGame} />}
+      {introOpen && (
+        <IntroPopup onStart={handleIntroClose} resume={state.phase !== "intro"} />
+      )}
+
+      {/* Reopens How to Play; mirrors the user menu in the opposite corner */}
+      <button
+        className="help-btn"
+        onClick={() => setIntroOpen(true)}
+        aria-label="How to play"
+        title="How to play"
+      >
+        <i className="fas fa-question"></i>
+      </button>
 
       <UserMenu
         onOpenAuth={() => setAuthPopupOpen(true)}

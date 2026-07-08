@@ -35,7 +35,8 @@ An interactive web game that challenges users to identify anime series by watchi
 - **Optional accounts** (email/password or Google/Discord) with persistent personal stats: games played, total correct, best score, average score, accuracy, and correct-answer streaks.
 - Guest play fully supported — signing in is never required.
 - Option to toggle between local and online databases for anime openings.
-- Input suggestions (autocomplete) for anime titles.
+- Input suggestions (autocomplete) for anime titles, with automatic failover across two independent APIs (Jikan, then AniList) plus a bundled offline list — suggestions keep working even during MyAnimeList outages.
+- Forgiving answer matching: guesses are case- and punctuation-insensitive (e.g. "hells paradise" counts for *Hell's Paradise*), and clips accept multiple titles/spellings (e.g. both "Haikyu!!" and "Haikyuu").
 - Responsive, modern UI.
 - Volume and mute controls, keyboard shortcuts, and accessibility.
 - Planned difficulty indicator (Easy/Medium/Hard) per clip.
@@ -81,7 +82,7 @@ anime-guess-game\
 │&nbsp;&nbsp;&nbsp;├── App.jsx # Top-level composition, video ref, keyboard shortcuts, stat recording\
 │&nbsp;&nbsp;&nbsp;├── styles.css # UI and layout styles\
 │&nbsp;&nbsp;&nbsp;├── data/ # Local fallback clip/answer data\
-│&nbsp;&nbsp;&nbsp;├── api/ # AnimeThemes.moe, Jikan, and stats (Supabase) calls\
+│&nbsp;&nbsp;&nbsp;├── api/ # AnimeThemes.moe, Jikan/AniList autocomplete, and stats (Supabase) calls\
 │&nbsp;&nbsp;&nbsp;├── context/ # AuthContext (session state, sign in/up/out)\
 │&nbsp;&nbsp;&nbsp;├── lib/ # Supabase client setup\
 │&nbsp;&nbsp;&nbsp;├── hooks/ # Game state (score, guesses, rounds)\
@@ -98,7 +99,8 @@ anime-guess-game\
 - **Supabase**: authentication (email + OAuth) and Postgres-backed stat storage
 - Anime opening data fetched via public APIs:
   - [AnimeThemes.moe API](https://animethemes.moe/)
-  - [Jikan.moe API](https://jikan.moe/) (for autocomplete)
+  - [Jikan.moe API](https://jikan.moe/) (primary autocomplete source)
+  - [AniList GraphQL API](https://docs.anilist.co/) (autocomplete fallback when Jikan/MyAnimeList is down)
 
 ---
 

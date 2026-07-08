@@ -11,7 +11,7 @@ export const fallbackClips = {
     quality: "720p",
   },
   "videos/anime3.mp4": {
-    answers: ["Haikyuu", "Haikyuu!!", "Haikyuu!! To the Top"],
+    answers: ["Haikyu!!", "Haikyu", "Haikyu!! To the Top", "Haikyuu", "Haikyuu!! To the Top"],
     quality: "480p",
   },
   "videos/anime4.mp4": {

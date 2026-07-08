@@ -6,10 +6,18 @@ import { fetchSuggestions } from "../api/jikan";
 export default function GuessInput({ inputRef, value, onChange, onSubmitEnter }) {
   const [suggestions, setSuggestions] = useState([]);
   const containerRef = useRef(null);
+  // Set when the value change came from clicking a suggestion, so the fetch
+  // effect below skips one run instead of reopening the dropdown.
+  const justSelectedRef = useRef(false);
 
   // Fetch suggestions as the user types, debounced by 300ms so we call the
   // API once per pause in typing rather than on every keystroke.
   useEffect(() => {
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
+    }
+
     const query = value.trim();
     if (query.length < 2) {
       setSuggestions([]);
@@ -58,6 +66,7 @@ export default function GuessInput({ inputRef, value, onChange, onSubmitEnter })
             <li
               key={anime.mal_id ?? anime.title}
               onClick={() => {
+                justSelectedRef.current = true;
                 onChange(anime.title);
                 setSuggestions([]);
               }}

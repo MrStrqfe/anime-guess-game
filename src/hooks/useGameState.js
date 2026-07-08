@@ -5,6 +5,17 @@ import { fetchAnimeThemes } from "../api/animeThemes";
 export const MAX_GUESSES = 3;
 export const TOTAL_QUESTIONS = 10;
 
+// Lowercases and strips punctuation so near-miss guesses still count:
+// "haikyuu" matches "Haikyuu!!", "steins gate" matches "Steins;Gate",
+// "kaiju no 8" matches "Kaiju No. 8". Letters and digits are kept, every
+// other run of characters collapses to a single space.
+function normalizeTitle(text) {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
 // Picks a random clip that hasn't been played yet this game.
 // Returns null when every clip has been used, which ends the game early.
 function pickNextClip(videoClips, usedClips) {
@@ -169,12 +180,14 @@ export function useGameState() {
   }, []);
 
   // Checks a guess against the accepted answers for the current clip
-  // (case-insensitive) and routes to the right outcome: correct, wrong but
-  // with guesses left, or wrong on the last guess (which reveals the answer).
+  // (case- and punctuation-insensitive) and routes to the right outcome:
+  // correct, wrong but with guesses left, or wrong on the last guess (which
+  // reveals the answer).
   const submitGuess = useCallback(
     (guess) => {
+      const normalizedGuess = normalizeTitle(guess);
       const isCorrect = state.currentAcceptedAnswers.some(
-        (answer) => answer.toLowerCase() === guess.toLowerCase()
+        (answer) => normalizeTitle(answer) === normalizedGuess
       );
 
       if (isCorrect) {

@@ -9,6 +9,44 @@
    (--chrome-h), so fullscreen and windowed both fit without scroll.
    ============================================================ */
 
+@import "tailwindcss";
+
+/* Design tokens exposed to Tailwind — generates utilities like bg-panel,
+   border-line, text-dim, text-gold, font-display, and max-phone:/max-tab:
+   responsive variants matching the legacy 560px/768px media queries. */
+@theme {
+  --color-primary: #ff2e7e;
+  --color-secondary: #7c6cff;
+  --color-accent: #29d8ff;
+  --color-gold: #ffc843;
+  --color-dark: #0c1122;
+  --color-darker: #070a14;
+  --color-light: #eef2ff;
+  --color-success: #3ddc84;
+  --color-warning: #ffab2e;
+  --color-danger: #ff4d5e;
+  --color-panel: rgba(15, 21, 43, 0.72);
+  --color-panel-solid: #0f152b;
+  --color-line: rgba(140, 170, 255, 0.16);
+  --color-dim: rgba(214, 226, 255, 0.62);
+  --font-body: "Poppins", sans-serif;
+  --font-display: "Orbitron", "Poppins", sans-serif;
+  --breakpoint-phone: 35rem; /* 560px */
+  --breakpoint-tab: 48rem;   /* 768px */
+}
+
+/* Angled HUD corner cut shared by panels, buttons, and popups. */
+@utility corner-cut {
+  clip-path: polygon(
+    var(--cut) 0,
+    100% 0,
+    100% calc(100% - var(--cut)),
+    calc(100% - var(--cut)) 100%,
+    0 100%,
+    0 var(--cut)
+  );
+}
+
 :root {
   /* Palette */
   --primary: #ff2e7e;   /* neon magenta — actions, highlights */
@@ -45,12 +83,6 @@
 
   /* HUD corner cut used across panels and buttons */
   --cut: 10px;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {

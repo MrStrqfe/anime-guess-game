@@ -129,56 +129,6 @@ body {
   -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, black 30%, transparent 100%);
 }
 
-/* ============ Header ============ */
-.anime-header {
-  text-align: center;
-  margin-bottom: clamp(0.5rem, 1.6vh, 1.25rem);
-  position: relative;
-  z-index: 10;
-}
-
-.anime-header h1 {
-  font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: clamp(1.4rem, 1rem + 2.2vw, 2.4rem);
-  line-height: 1.15;
-}
-
-.gradient-text {
-  background: linear-gradient(90deg, var(--primary), var(--secondary) 55%, var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 18px rgba(255, 46, 126, 0.35));
-}
-
-.anime-header h3 {
-  font-size: clamp(0.8rem, 0.7rem + 0.5vw, 1rem);
-  font-weight: 400;
-  color: var(--text-dim);
-  margin-top: 0.2rem;
-}
-
-.header-decoration {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 0.55rem;
-}
-
-.decoration-item {
-  width: 34px;
-  height: 3px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--primary), var(--accent));
-  opacity: 0.8;
-}
-
-.decoration-item:nth-child(2) { opacity: 0.5; }
-.decoration-item:nth-child(3) { opacity: 0.25; }
-
 /* ============ Game panel ============ */
 .game-container {
   background: var(--panel);
@@ -1241,15 +1191,6 @@ input:focus-visible,
   :root {
     --chrome-h: 18rem;
     --cut: 8px;
-  }
-
-  /* Keep the title clear of the fixed Sign In button */
-  .anime-header {
-    padding: 0 72px;
-  }
-
-  .anime-header h1 {
-    font-size: 1.25rem;
   }
 
   .game-container {

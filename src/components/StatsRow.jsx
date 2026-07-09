@@ -6,18 +6,27 @@ function guessesColor(remainingGuesses) {
   return "#4CAF50";
 }
 
+// Shared shell for the two HUD chips below.
+const chipClasses =
+  "font-display text-base font-semibold tracking-[0.04em] inline-flex items-center gap-2 " +
+  "px-4 py-2 bg-[rgba(5,8,18,0.6)] border border-line corner-cut " +
+  "transition-[border-color] duration-300";
+
 // In-game HUD row showing the current score and how many guesses remain
 // for this clip.
 export default function StatsRow({ score, remainingGuesses, maxGuesses }) {
   return (
-    <div className="stats-row">
-      <div className="score-display">
-        <i className="fas fa-trophy"></i>
-        <span id="score">{score}</span>
+    <div className="flex gap-2.5 max-phone:justify-center">
+      <div className={chipClasses}>
+        <i className="fas fa-trophy text-gold [text-shadow:0_0_12px_rgba(255,200,67,0.45)]"></i>
+        <span id="score" className="text-gold [text-shadow:0_0_12px_rgba(255,200,67,0.45)]">
+          {score}
+        </span>
       </div>
+      {/* The urgency color is set inline and flows to the icon + count via currentColor */}
       <div
         id="guesses-display"
-        className="guesses-display"
+        className={chipClasses}
         style={{ color: guessesColor(remainingGuesses) }}
       >
         <i className="fas fa-lightbulb"></i>

@@ -23,6 +23,9 @@ export default function App() {
   const videoRef = useRef(null);
   const guessInputRef = useRef(null);
   const [sourceLoading, setSourceLoading] = useState(false);
+  // Toast for clip-source failures (year with no clips, network errors).
+  // Same trigger-counter pattern as the guess-validation toast.
+  const [sourceError, setSourceError] = useState({ trigger: 0, text: "" });
   const [authPopupOpen, setAuthPopupOpen] = useState(false);
   const [statsPopupOpen, setStatsPopupOpen] = useState(false);
   const [paused, setPaused] = useState(true);
@@ -158,11 +161,30 @@ export default function App() {
   }
 
   // Switches between local and online clips, showing a loading state on the
-  // button while the online library is being fetched.
+  // button while the online library is being fetched. Going local also clears
+  // an active year filter (the reducer resets it), so the dropdown re-renders
+  // to "All years".
   async function handleToggleSource() {
     setSourceLoading(true);
     await actions.toggleClipSource();
     setSourceLoading(false);
+  }
+
+  // Restricts the game to a single year (online-only) or back to all years.
+  // Failures leave the current game running and just show a toast.
+  async function handleSelectYear(year) {
+    setSourceLoading(true);
+    const result = await actions.selectYear(year);
+    setSourceLoading(false);
+    if (!result.ok) {
+      setSourceError((prev) => ({
+        trigger: prev.trigger + 1,
+        text:
+          result.reason === "empty"
+            ? `No clips found for ${year}`
+            : "Couldn't load clips — check your connection",
+      }));
+    }
   }
 
   // Global keyboard shortcuts: Space/Arrows/M/R, plus Enter-to-submit
@@ -217,7 +239,10 @@ export default function App() {
 
       {/* Reopens How to Play; mirrors the user menu in the opposite corner */}
       <button
-        className="help-btn"
+        className="fixed top-3 left-3 z-[1100] w-[38px] h-[38px] rounded-full bg-[rgba(5,8,18,0.65)]
+          text-dim border border-line text-[0.9rem] cursor-pointer backdrop-blur-[8px]
+          flex items-center justify-center transition-[color,border-color,box-shadow] duration-200
+          hover:text-accent hover:border-accent hover:shadow-[0_0_14px_rgba(41,216,255,0.3)]"
         onClick={() => setIntroOpen(true)}
         aria-label="How to play"
         title="How to play"
@@ -232,7 +257,7 @@ export default function App() {
 
       <Header />
 
-      <div className="game-container">
+      <div className="bg-panel border border-line corner-cut p-[var(--card-pad)] w-fit max-w-full max-phone:w-full backdrop-blur-[14px] relative z-10">
         <VideoPlayer ref={videoRef} src={state.currentClipUrl} revealed={state.revealed} />
 
         <GuessInput
@@ -242,7 +267,7 @@ export default function App() {
           onSubmitEnter={handleSubmit}
         />
 
-        <div className="actions">
+        <div className="flex justify-between items-center gap-3 mt-[clamp(10px,1.6vh,16px)] flex-wrap max-tab:justify-center max-phone:flex-col max-phone:gap-2.5">
           <StatsRow score={state.score} remainingGuesses={state.remainingGuesses} maxGuesses={MAX_GUESSES} />
           <ActionButtons
             submitVisible={state.submitVisible}
@@ -250,6 +275,8 @@ export default function App() {
             usingOnlineClips={state.usingOnlineClips}
             sourceLoading={sourceLoading}
             onToggleSource={handleToggleSource}
+            selectedYear={state.selectedYear}
+            onSelectYear={handleSelectYear}
           />
         </div>
 
@@ -266,6 +293,7 @@ export default function App() {
 
       <div className="input-wrapper">
         <PopupMessage trigger={state.validationTrigger} message="Please enter your guess before clicking next" />
+        <PopupMessage id="source-error-message" trigger={sourceError.trigger} message={sourceError.text} />
         <p id="result"></p>
       </div>
 
@@ -280,7 +308,9 @@ export default function App() {
       <ScorePopup
         visible={state.phase === "gameOver"}
         score={state.score}
-        totalQuestions={TOTAL_QUESTIONS}
+        // A year with fewer than 10 clips ends the game early; show the real
+        // number of rounds played (|| guards the 0/0 NaN-accuracy case).
+        totalQuestions={state.questionsAnswered || TOTAL_QUESTIONS}
         onPlayAgain={actions.playAgain}
         signedIn={Boolean(user)}
         onOpenAuth={authEnabled ? () => setAuthPopupOpen(true) : null}

@@ -10,7 +10,15 @@ export default function IntroPopup({ onStart, resume = false }) {
             How to Play <i className="fas fa-gamepad"></i>
           </h2>
         </div>
-        <ol className="instructions">
+        <ol
+          className="text-left my-[1.2rem] mx-auto max-w-[92%] list-none
+            [&>li]:mb-[0.6rem] [&>li]:px-3.5 [&>li]:py-2.5 [&>li]:bg-[rgba(140,170,255,0.05)]
+            [&>li]:border [&>li]:border-transparent [&>li]:border-l-2 [&>li]:border-l-primary
+            [&>li]:rounded-md [&>li]:flex [&>li]:items-center [&>li]:gap-2.5 [&>li]:text-[0.95rem]
+            [&>li]:transition-[background-color,transform] [&>li]:duration-200
+            [&>li:hover]:bg-[rgba(140,170,255,0.1)] [&>li:hover]:translate-x-1
+            [&_i]:text-primary [&_i]:w-5 [&_i]:text-center"
+        >
           <li>
             <i className="fas fa-eye"></i> Watch the blurred anime opening
           </li>

@@ -44,8 +44,8 @@ export default function GuessInput({ inputRef, value, onChange, onSubmitEnter })
   }, []);
 
   return (
-    <div className="input-row">
-      <div className="input-and-suggestions" ref={containerRef}>
+    <div className="mx-auto mt-[clamp(10px,1.6vh,18px)] w-[min(100%,640px)]">
+      <div className="relative w-full" ref={containerRef}>
         <input
           type="text"
           id="guess-input"

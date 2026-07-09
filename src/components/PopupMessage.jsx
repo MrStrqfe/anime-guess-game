@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 // A small toast that shows `message` for 2 seconds and hides itself.
 // `trigger` is a counter, not a boolean: the parent bumps it each time the
 // toast should appear, which also restarts the timer if it's already showing.
-export default function PopupMessage({ trigger, message }) {
+// `id` distinguishes multiple instances (validation vs. clip-source errors).
+export default function PopupMessage({ trigger, message, id = "popup-message" }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -14,7 +15,7 @@ export default function PopupMessage({ trigger, message }) {
   }, [trigger]);
 
   return (
-    <div id="popup-message" className={visible ? "" : "hidden"}>
+    <div id={id} className={`toast-message ${visible ? "" : "hidden"}`}>
       <i className="fas fa-exclamation-circle"></i> {message}
     </div>
   );

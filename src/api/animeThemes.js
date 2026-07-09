@@ -43,18 +43,25 @@ function getAllAnimeNames(primaryName, slug) {
 }
 
 // Fetches opening themes from AnimeThemes.moe and builds the
-// { videoUrl: { answers, quality } } map used to drive the online clip source.
-export async function fetchAnimeThemes() {
-  const response = await fetch(
-    "https://api.animethemes.moe/anime?include=animethemes.animethemeentries.videos&filter[has]=animethemes&filter[animetheme][type]=OP&page[size]=100"
-  );
+// { videoUrl: { answers, quality, year } } map used to drive the online clip
+// source. Pass `year` to only fetch anime that aired that year (year mode).
+export async function fetchAnimeThemes({ year = null } = {}) {
+  const params = new URLSearchParams({
+    include: "animethemes.animethemeentries.videos",
+    "filter[has]": "animethemes",
+    "filter[animetheme][type]": "OP",
+    "page[size]": "100",
+  });
+  if (year) params.set("filter[year]", String(year));
+
+  const response = await fetch(`https://api.animethemes.moe/anime?${params}`);
 
   if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
 
   const { anime } = await response.json();
   const videoClips = {};
 
-  anime.forEach(({ name, slug, animethemes }) => {
+  anime.forEach(({ name, slug, year: animeYear, animethemes }) => {
     const opVideos = animethemes
       .filter((theme) => theme.type === "OP")
       .flatMap((theme) =>
@@ -76,6 +83,7 @@ export async function fetchAnimeThemes() {
       videoClips[bestVideo.url] = {
         answers: titles,
         quality: bestVideo.quality,
+        year: animeYear ?? null,
       };
     }
   });

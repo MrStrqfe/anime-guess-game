@@ -49,7 +49,12 @@ export default function AuthPopup({ visible, onClose }) {
   return (
     <div className={`popup ${visible ? "" : "hidden"}`}>
       <div className="popup-content anime-popup auth-popup">
-        <button className="popup-close-btn" onClick={onClose} aria-label="Close">
+        <button
+          className="absolute top-3 right-3.5 z-[2] text-dim text-[1.2rem] cursor-pointer
+            transition-colors duration-200 hover:text-primary"
+          onClick={onClose}
+          aria-label="Close"
+        >
           <i className="fas fa-times"></i>
         </button>
         <div className="popup-header">
@@ -58,10 +63,11 @@ export default function AuthPopup({ visible, onClose }) {
           </h2>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        {/* `auth-input` / `auth-error` stay as bare class hooks for the E2E scripts */}
+        <form className="flex flex-col gap-3 mx-auto max-w-[360px]" onSubmit={handleSubmit}>
           <input
             type="email"
-            className="auth-input"
+            className={authInputClasses}
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -70,7 +76,7 @@ export default function AuthPopup({ visible, onClose }) {
           />
           <input
             type="password"
-            className="auth-input"
+            className={authInputClasses}
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -78,29 +84,35 @@ export default function AuthPopup({ visible, onClose }) {
             minLength={6}
             autoComplete={isSignup ? "new-password" : "current-password"}
           />
-          {error && <p className="auth-error">{error}</p>}
-          <button type="submit" className="neon-btn auth-submit-btn" disabled={busy}>
+          {error && <p className="auth-error text-danger text-[0.88rem]">{error}</p>}
+          <button
+            type="submit"
+            className="neon-btn mt-2 disabled:opacity-60 disabled:cursor-wait"
+            disabled={busy}
+          >
             <span>{busy ? "Please wait..." : isSignup ? "Sign Up" : "Sign In"}</span>
             <i className="fas fa-arrow-right"></i>
           </button>
         </form>
 
-        <div className="auth-divider">or continue with</div>
+        <div className="mt-[1.2rem] mb-[0.8rem] text-dim text-[0.78rem] uppercase tracking-[2px]">
+          or continue with
+        </div>
 
-        <div className="oauth-buttons">
-          <button className="oauth-btn" onClick={() => handleProvider("google")}>
+        <div className="flex justify-center gap-3">
+          <button className={oauthBtnClasses} onClick={() => handleProvider("google")}>
             <i className="fab fa-google"></i> Google
           </button>
-          <button className="oauth-btn" onClick={() => handleProvider("discord")}>
+          <button className={oauthBtnClasses} onClick={() => handleProvider("discord")}>
             <i className="fab fa-discord"></i> Discord
           </button>
         </div>
 
-        <p className="auth-switch">
+        <p className="mt-[1.2rem] text-dim text-[0.88rem]">
           {isSignup ? "Already have an account?" : "No account yet?"}{" "}
           <button
             type="button"
-            className="auth-link-btn"
+            className="text-accent text-[0.88rem] font-body underline underline-offset-[3px] cursor-pointer"
             onClick={() => {
               setMode(isSignup ? "signin" : "signup");
               setError("");
@@ -109,8 +121,22 @@ export default function AuthPopup({ visible, onClose }) {
             {isSignup ? "Sign in" : "Sign up"}
           </button>
         </p>
-        <p className="auth-guest-note">You can keep playing as a guest — stats just won't be saved.</p>
+        <p className="mt-[0.6rem] text-[rgba(214,226,255,0.4)] text-[0.78rem]">
+          You can keep playing as a guest — stats just won't be saved.
+        </p>
       </div>
     </div>
   );
 }
+
+const authInputClasses =
+  "auth-input w-full px-[18px] py-3 text-[0.95rem] font-body text-light bg-[rgba(5,8,18,0.75)] " +
+  "border border-line rounded-lg transition-[border-color,box-shadow] duration-200 " +
+  "focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(41,216,255,0.18)] " +
+  "placeholder:text-[rgba(214,226,255,0.4)]";
+
+const oauthBtnClasses =
+  "bg-[rgba(140,170,255,0.06)] text-light border border-line rounded-lg px-[22px] py-2.5 " +
+  "text-[0.9rem] font-body cursor-pointer inline-flex items-center gap-2 " +
+  "transition-[border-color,background-color] duration-200 " +
+  "hover:border-accent hover:bg-[rgba(41,216,255,0.08)]";

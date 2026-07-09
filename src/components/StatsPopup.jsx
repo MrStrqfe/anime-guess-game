@@ -33,10 +33,34 @@ export default function StatsPopup({ visible, onClose }) {
       .catch(() => setError("Could not load your stats. Please try again."));
   }, [visible, user]);
 
+  const statCards = stats
+    ? [
+        { value: stats.games_played, label: "Games Played" },
+        { value: stats.total_correct, label: "Total Correct" },
+        { value: `${stats.best_score}/10`, label: "Best Score" },
+        { value: formatAverage(stats), label: "Avg Score" },
+        { value: formatAccuracy(stats), label: "Accuracy" },
+        {
+          value: (
+            <>
+              {stats.current_streak} <i className="fas fa-fire text-warning text-[1.05rem]"></i>
+            </>
+          ),
+          label: "Current Streak",
+        },
+        { value: stats.longest_streak, label: "Longest Streak", wide: true },
+      ]
+    : [];
+
   return (
     <div className={`popup ${visible ? "" : "hidden"}`}>
       <div className="popup-content anime-popup stats-popup">
-        <button className="popup-close-btn" onClick={onClose} aria-label="Close">
+        <button
+          className="absolute top-3 right-3.5 z-[2] text-dim text-[1.2rem] cursor-pointer
+            transition-colors duration-200 hover:text-primary"
+          onClick={onClose}
+          aria-label="Close"
+        >
           <i className="fas fa-times"></i>
         </button>
         <div className="popup-header">
@@ -45,41 +69,22 @@ export default function StatsPopup({ visible, onClose }) {
           </h2>
         </div>
 
-        {error && <p className="auth-error">{error}</p>}
-        {!error && !stats && <p className="stats-loading">Loading...</p>}
+        {error && <p className="auth-error text-danger text-[0.88rem]">{error}</p>}
+        {!error && !stats && <p className="text-dim my-6">Loading...</p>}
 
         {stats && (
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-value">{stats.games_played}</div>
-              <div className="stat-label">Games Played</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{stats.total_correct}</div>
-              <div className="stat-label">Total Correct</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{stats.best_score}/10</div>
-              <div className="stat-label">Best Score</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{formatAverage(stats)}</div>
-              <div className="stat-label">Avg Score</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{formatAccuracy(stats)}</div>
-              <div className="stat-label">Accuracy</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">
-                {stats.current_streak} <i className="fas fa-fire stat-fire"></i>
+          <div className="grid grid-cols-3 max-phone:grid-cols-2 gap-2.5 mt-4">
+            {statCards.map(({ value, label, wide }) => (
+              <div
+                key={label}
+                className={`bg-[rgba(140,170,255,0.05)] border border-line rounded-lg px-2.5 py-3.5 ${
+                  wide ? "col-span-2 max-phone:col-span-1" : ""
+                }`}
+              >
+                <div className="font-display text-[1.45rem] font-bold text-accent">{value}</div>
+                <div className="text-[0.75rem] text-dim mt-1">{label}</div>
               </div>
-              <div className="stat-label">Current Streak</div>
-            </div>
-            <div className="stat-card stat-card-wide">
-              <div className="stat-value">{stats.longest_streak}</div>
-              <div className="stat-label">Longest Streak</div>
-            </div>
+            ))}
           </div>
         )}
       </div>

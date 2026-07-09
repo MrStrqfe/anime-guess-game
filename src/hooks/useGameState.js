@@ -34,6 +34,7 @@ const initialState = {
   usedClips: [],
   videoClips: {},
   usingOnlineClips: false,
+  selectedYear: null, // null = all years (any clip source)
   currentClipUrl: "",
   currentAcceptedAnswers: [],
   remainingGuesses: MAX_GUESSES,
@@ -84,14 +85,29 @@ function reducer(state, action) {
   switch (action.type) {
     case "START_GAME": {
       return startRound(
-        { ...state, score: 0, questionsAnswered: 0, roundResults: [], usingOnlineClips: false, phase: "playing" },
+        {
+          ...state,
+          score: 0,
+          questionsAnswered: 0,
+          roundResults: [],
+          usingOnlineClips: false,
+          selectedYear: null,
+          phase: "playing",
+        },
         fallbackClips,
         []
       );
     }
     case "SWITCH_SOURCE": {
       return startRound(
-        { ...state, score: 0, roundResults: [], usingOnlineClips: action.usingOnlineClips },
+        {
+          ...state,
+          score: 0,
+          questionsAnswered: 0,
+          roundResults: [],
+          usingOnlineClips: action.usingOnlineClips,
+          selectedYear: action.year ?? null,
+        },
         action.videoClips,
         []
       );
@@ -163,17 +179,37 @@ export function useGameState() {
   // Switches between the bundled local clips and the AnimeThemes.moe online
   // library. Fetching the online list can fail (network, API down), so this
   // returns false on failure and leaves the current game untouched.
+  // Always clears an active year filter: the toggle and the year selector
+  // are mutually resetting, so the dropdown reads "All years" afterwards.
   const toggleClipSource = useCallback(async () => {
     const goingOnline = !state.usingOnlineClips;
     try {
       const videoClips = goingOnline ? await fetchAnimeThemes() : fallbackClips;
-      dispatch({ type: "SWITCH_SOURCE", videoClips, usingOnlineClips: goingOnline });
+      dispatch({ type: "SWITCH_SOURCE", videoClips, usingOnlineClips: goingOnline, year: null });
       return true;
     } catch (error) {
       console.error("Failed to switch clip source:", error);
       return false;
     }
   }, [state.usingOnlineClips]);
+
+  // Restricts the game to anime that aired in `year` (always fetched from
+  // the online library) and restarts. `null` returns to the local all-years
+  // clips. Returns { ok, reason? } so the caller can surface errors; on
+  // failure the current game is left untouched, matching toggleClipSource.
+  const selectYear = useCallback(async (year) => {
+    try {
+      const videoClips = year === null ? fallbackClips : await fetchAnimeThemes({ year });
+      if (year !== null && Object.keys(videoClips).length === 0) {
+        return { ok: false, reason: "empty" };
+      }
+      dispatch({ type: "SWITCH_SOURCE", videoClips, usingOnlineClips: year !== null, year });
+      return { ok: true };
+    } catch (error) {
+      console.error("Failed to load clips for year", year, error);
+      return { ok: false, reason: "network" };
+    }
+  }, []);
 
   const setGuessValue = useCallback((value) => {
     dispatch({ type: "SET_GUESS", value });
@@ -221,6 +257,7 @@ export function useGameState() {
     actions: {
       startGame,
       toggleClipSource,
+      selectYear,
       setGuessValue,
       submitGuess,
       showValidationMessage,

@@ -12,6 +12,7 @@ An interactive web game that challenges users to identify anime series by watchi
 - Accounts & Personal Stats
 - Project Structure
 - Technologies Used
+- REST APIs Used
 - Development
 - Supabase Setup (for your own deployment)
 - Planned Features
@@ -101,6 +102,19 @@ anime-guess-game\
   - [AnimeThemes.moe API](https://animethemes.moe/)
   - [Jikan.moe API](https://jikan.moe/) (primary autocomplete source)
   - [AniList GraphQL API](https://docs.anilist.co/) (autocomplete fallback when Jikan/MyAnimeList is down)
+
+---
+
+## REST APIs Used
+
+The game pulls its data from a few public web APIs (none require an API key):
+
+- **[AnimeThemes.moe API](https://api-docs.animethemes.moe/)** — `GET https://api.animethemes.moe/anime`. Fetches anime opening themes (filtered to OP-type themes, optionally by air year) along with their video files. The game picks the highest-quality clip per anime and builds the accepted-answer list from each show's title and slug. (`src/api/animeThemes.js`)
+- **[Jikan API v4](https://docs.api.jikan.moe/)** — `GET https://api.jikan.moe/v4/anime?q=...`. An unofficial MyAnimeList REST API; the primary source for the autocomplete dropdown, returning up to 5 TV anime matching the player's partial input. (`src/api/jikan.js`)
+- **[AniList API](https://docs.anilist.co/)** — `POST https://graphql.anilist.co`. Autocomplete fallback when Jikan is unreachable. Technically GraphQL rather than REST, but it fills the same role: searching anime titles during MyAnimeList outages. (`src/api/jikan.js`)
+- **[Supabase](https://supabase.com)** — the `supabase-js` client talks to Supabase's REST endpoints (`/auth/v1` for sign-in and `/rest/v1` for data/RPC) for accounts and stat storage. Stats are only written through the `record_game` database function. (`src/api/`, `src/lib/`)
+
+If all online sources are unavailable, the game falls back to the bundled local clip and title data in `src/data/`.
 
 ---
 

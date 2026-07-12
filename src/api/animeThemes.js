@@ -10,35 +10,51 @@ function selectBestQualityVideo(videos) {
   }, videos[0]);
 }
 
-// Builds the list of guesses that should count as correct for an anime,
-// covering common alternate ways a player might type its name.
-function getAllAnimeNames(primaryName, slug) {
-  const names = [primaryName];
+// Expands one title into the alternate ways a player might type it.
+function getTitleVariants(title) {
+  const variants = [title];
+
+  // Accept the title without its subtitle, e.g. "Demon Slayer: ..." -> "Demon Slayer"
+  if (title.includes(":")) {
+    variants.push(title.split(":")[0].trim());
+  }
+  // Accept the title without punctuation, e.g. "Haikyuu!!" -> "Haikyuu"
+  if (title.includes("!")) {
+    variants.push(title.replace(/!/g, "").trim());
+  }
+
+  // Accept a common acronym for longer titles, e.g. "Attack on Titan" -> "AoT"
+  if (title.split(" ").length >= 3) {
+    const abbreviation = title
+      .split(" ")
+      .map((word) => word[0])
+      .join("");
+    variants.push(abbreviation);
+  }
+
+  return variants;
+}
+
+// Builds the list of guesses that should count as correct for an anime.
+// The primary name from AnimeThemes.moe is the romanized Japanese title
+// (e.g. "Shingeki no Kyojin"); synonyms add the official English title
+// (e.g. "Attack on Titan") and other alternates, so a guess in either
+// language counts. Native-script titles are skipped since nobody types kanji.
+function getAllAnimeNames(primaryName, slug, synonyms = []) {
+  const titles = [
+    primaryName,
+    ...synonyms
+      .filter((synonym) => synonym.type !== "Native")
+      .map((synonym) => synonym.text),
+  ];
+
+  const names = titles.flatMap(getTitleVariants);
 
   // e.g. "attack-on-titan" -> "attack on titan"
   names.push(slug.replace(/-/g, " "));
 
-  // Accept the title without its subtitle, e.g. "Demon Slayer: ..." -> "Demon Slayer"
-  if (primaryName.includes(":")) {
-    names.push(primaryName.split(":")[0].trim());
-  }
-  // Accept the title without punctuation, e.g. "Haikyuu!!" -> "Haikyuu"
-  if (primaryName.includes("!")) {
-    names.push(primaryName.replace(/!/g, "").trim());
-  }
-
-  // Accept a common acronym for longer titles, e.g. "Attack on Titan" -> "AoT"
-  if (primaryName.split(" ").length >= 3) {
-    const abbreviation = primaryName
-      .split(" ")
-      .map((word) => word[0])
-      .join("");
-    names.push(abbreviation);
-  }
-
   // Dedupe and lowercase so guesses can be matched case-insensitively.
-  return [...new Set(names)]
-    .map((name) => name.toLowerCase())
+  return [...new Set(names.map((name) => name.toLowerCase()))]
     .filter((name) => name.length > 0);
 }
 
@@ -47,7 +63,7 @@ function getAllAnimeNames(primaryName, slug) {
 // source. Pass `year` to only fetch anime that aired that year (year mode).
 export async function fetchAnimeThemes({ year = null } = {}) {
   const params = new URLSearchParams({
-    include: "animethemes.animethemeentries.videos",
+    include: "animesynonyms,animethemes.animethemeentries.videos",
     "filter[has]": "animethemes",
     "filter[animetheme][type]": "OP",
     "page[size]": "100",
@@ -61,7 +77,7 @@ export async function fetchAnimeThemes({ year = null } = {}) {
   const { anime } = await response.json();
   const videoClips = {};
 
-  anime.forEach(({ name, slug, year: animeYear, animethemes }) => {
+  anime.forEach(({ name, slug, year: animeYear, animethemes, animesynonyms }) => {
     const opVideos = animethemes
       .filter((theme) => theme.type === "OP")
       .flatMap((theme) =>
@@ -78,7 +94,7 @@ export async function fetchAnimeThemes({ year = null } = {}) {
 
     if (opVideos.length > 0) {
       const bestVideo = selectBestQualityVideo(opVideos);
-      const titles = getAllAnimeNames(name, slug);
+      const titles = getAllAnimeNames(name, slug, animesynonyms ?? []);
 
       videoClips[bestVideo.url] = {
         answers: titles,

@@ -17,11 +17,18 @@ import UserMenu from "./components/UserMenu";
 import AuthPopup from "./components/AuthPopup";
 import StatsPopup from "./components/StatsPopup";
 
+const EASE = "cubic-bezier(0.25, 0.1, 0.25, 1)";
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export default function App() {
   const { state, actions } = useGameState();
   const { user, enabled: authEnabled } = useAuth();
   const videoRef = useRef(null);
   const guessInputRef = useRef(null);
+  const cardRef = useRef(null);
   const [sourceLoading, setSourceLoading] = useState(false);
   // Toast for clip-source failures (year with no clips, network errors).
   // Same trigger-counter pattern as the guess-validation toast.
@@ -31,6 +38,11 @@ export default function App() {
   const [paused, setPaused] = useState(true);
   const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  // Media pill shows while the pointer is over the video or playback is paused.
+  const [controlsHover, setControlsHover] = useState(false);
+  // The round-result sheet lags the reducer slightly on correct answers so
+  // the card can pulse first (see the effect below).
+  const [resultShown, setResultShown] = useState(null);
   const lastVolumeRef = useRef(1);
   // How to Play only auto-opens until the player has started a game once
   // (persisted per browser); afterwards it's reachable via the "?" button.
@@ -100,12 +112,54 @@ export default function App() {
     recordGame(state.roundResults).catch(console.error);
   }, [state.phase, user, state.roundResults]);
 
-  // Refocus the guess input whenever an incorrect-but-not-final guess is made
+  // Wrong-but-not-final guess: shake the input (±3px, Apple-subtle) and
+  // refocus it for the next attempt.
   useEffect(() => {
-    if (state.incorrectToastTrigger > 0) {
-      guessInputRef.current?.focus();
+    if (state.incorrectToastTrigger === 0) return;
+    const input = guessInputRef.current;
+    if (!input) return;
+    input.focus();
+    if (!prefersReducedMotion()) {
+      input.animate(
+        [
+          { transform: "translateX(0)" },
+          { transform: "translateX(-3px)" },
+          { transform: "translateX(3px)" },
+          { transform: "translateX(-2px)" },
+          { transform: "translateX(0)" },
+        ],
+        { duration: 320, easing: "ease-in-out" }
+      );
     }
   }, [state.incorrectToastTrigger]);
+
+  // Round verdict choreography. A correct answer earns a soft blue pulse on
+  // the card first, with the result sheet following ~650ms later; a miss
+  // shows the sheet immediately. (`resultShown` is what the sheet renders.)
+  useEffect(() => {
+    if (!state.roundResult) {
+      setResultShown(null);
+      return;
+    }
+    if (state.roundResult.correct && !prefersReducedMotion()) {
+      cardRef.current?.animate(
+        [
+          {
+            boxShadow:
+              "0 30px 80px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.4), 0 0 0 0 rgba(0,113,227,0.45)",
+          },
+          {
+            boxShadow:
+              "0 30px 80px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.4), 0 0 0 26px rgba(0,113,227,0)",
+          },
+        ],
+        { duration: 750, easing: "ease-out" }
+      );
+      const timeout = setTimeout(() => setResultShown(state.roundResult), 650);
+      return () => clearTimeout(timeout);
+    }
+    setResultShown(state.roundResult);
+  }, [state.roundResult]);
 
   // The next four handlers control the <video> element directly through its
   // ref; the play/pause/volumechange listeners above then sync our UI state.
@@ -160,10 +214,40 @@ export default function App() {
     actions.submitGuess(guess);
   }
 
+  // Dismisses the round-result sheet and moves on. Between rounds the card
+  // content fades down and out (280ms), the clip swaps, and the new round
+  // fades back up (500ms) — skipped for reduced motion and at game end.
+  function handleContinue() {
+    const card = cardRef.current;
+    const lastRound = state.questionsAnswered >= TOTAL_QUESTIONS;
+    if (!card || lastRound || prefersReducedMotion()) {
+      actions.continueAfterReveal();
+      return;
+    }
+    const out = card.animate(
+      [
+        { opacity: 1, transform: "translateY(0)" },
+        { opacity: 0, transform: "translateY(10px)" },
+      ],
+      { duration: 280, easing: EASE, fill: "forwards" }
+    );
+    out.onfinish = () => {
+      actions.continueAfterReveal();
+      out.cancel();
+      card.animate(
+        [
+          { opacity: 0, transform: "translateY(-10px)" },
+          { opacity: 1, transform: "translateY(0)" },
+        ],
+        { duration: 500, easing: EASE }
+      );
+    };
+  }
+
   // Switches between local and online clips, showing a loading state on the
-  // button while the online library is being fetched. Going local also clears
-  // an active year filter (the reducer resets it), so the dropdown re-renders
-  // to "All years".
+  // segmented control while the online library is being fetched. Going local
+  // also clears an active year filter (the reducer resets it), so the
+  // dropdown re-renders to "All years".
   async function handleToggleSource() {
     setSourceLoading(true);
     await actions.toggleClipSource();
@@ -219,35 +303,31 @@ export default function App() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [state.submitVisible, state.guessValue]);
 
-  // While the round-result popup is open, Enter dismisses it (matches its Continue button)
+  // While the round-result sheet is open, Enter dismisses it (matches its
+  // Continue button, including the round transition).
   useEffect(() => {
-    if (!state.roundResult) return;
+    if (!resultShown) return;
     function handleKeyDown(e) {
-      if (e.code === "Enter") actions.continueAfterReveal();
+      if (e.code === "Enter") handleContinue();
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [state.roundResult, actions]);
+  });
 
   return (
     <>
-      <div id="particles-js"></div>
-
       {introOpen && (
         <IntroPopup onStart={handleIntroClose} resume={state.phase !== "intro"} />
       )}
 
-      {/* Reopens How to Play; mirrors the user menu in the opposite corner */}
+      {/* Reopens How to Play; mirrors the account button in the opposite corner */}
       <button
-        className="fixed top-3 left-3 z-[1100] w-[38px] h-[38px] rounded-full bg-[rgba(5,8,18,0.65)]
-          text-dim border border-line text-[0.9rem] cursor-pointer backdrop-blur-[8px]
-          flex items-center justify-center transition-[color,border-color,box-shadow] duration-200
-          hover:text-accent hover:border-accent hover:shadow-[0_0_14px_rgba(41,216,255,0.3)]"
+        className="corner-btn fixed top-4 left-4 z-[1100] text-[15px] font-medium"
         onClick={() => setIntroOpen(true)}
         aria-label="How to play"
         title="How to play"
       >
-        <i className="fas fa-question"></i>
+        ?
       </button>
 
       <UserMenu
@@ -257,21 +337,43 @@ export default function App() {
 
       <Header />
 
-      <div className="bg-panel border border-line corner-cut p-[var(--card-pad)] w-fit max-w-full max-phone:w-full backdrop-blur-[14px] relative z-10">
-        <VideoPlayer ref={videoRef} src={state.currentClipUrl} revealed={state.revealed} />
+      <div className="game-card w-fit max-phone:w-full" ref={cardRef}>
+        <VideoPlayer
+          ref={videoRef}
+          src={state.currentClipUrl}
+          revealed={state.revealed}
+          onHoverChange={setControlsHover}
+        >
+          <MediaControls
+            visible={controlsHover || paused}
+            paused={paused}
+            muted={muted}
+            volume={volume}
+            onPlayPause={togglePlayPause}
+            onRestart={handleRestart}
+            onToggleMute={handleToggleMute}
+            onVolumeChange={handleVolumeChange}
+          />
+        </VideoPlayer>
 
         <GuessInput
           inputRef={guessInputRef}
           value={state.guessValue}
           onChange={actions.setGuessValue}
           onSubmitEnter={handleSubmit}
+          submitVisible={state.submitVisible}
+          onSubmit={handleSubmit}
         />
 
-        <div className="flex justify-between items-center gap-3 mt-[clamp(10px,1.6vh,16px)] flex-wrap max-tab:justify-center max-phone:flex-col max-phone:gap-2.5">
-          <StatsRow score={state.score} remainingGuesses={state.remainingGuesses} maxGuesses={MAX_GUESSES} />
+        <div className="flex justify-between items-center gap-3.5 mt-4 flex-wrap max-tab:justify-center max-phone:flex-col max-phone:gap-2.5">
+          <StatsRow
+            score={state.score}
+            remainingGuesses={state.remainingGuesses}
+            maxGuesses={MAX_GUESSES}
+            round={state.questionsAnswered + 1}
+            totalRounds={TOTAL_QUESTIONS}
+          />
           <ActionButtons
-            submitVisible={state.submitVisible}
-            onSubmit={handleSubmit}
             usingOnlineClips={state.usingOnlineClips}
             sourceLoading={sourceLoading}
             onToggleSource={handleToggleSource}
@@ -279,31 +381,40 @@ export default function App() {
             onSelectYear={handleSelectYear}
           />
         </div>
+      </div>
 
-        <MediaControls
-          paused={paused}
-          muted={muted}
-          volume={volume}
-          onPlayPause={togglePlayPause}
-          onRestart={handleRestart}
-          onToggleMute={handleToggleMute}
-          onVolumeChange={handleVolumeChange}
-        />
+      {/* Desktop-only cheat sheet for the global shortcuts wired up above.
+          Hidden on small/short screens by styles.css. */}
+      <div className="kbd-hints" aria-hidden="true">
+        <span><kbd>Space</kbd> Play</span>
+        <span><kbd>R</kbd> Restart</span>
+        <span><kbd>M</kbd> Mute</span>
+        <span><kbd>← →</kbd> Volume</span>
       </div>
 
       <div className="input-wrapper">
-        <PopupMessage trigger={state.validationTrigger} message="Please enter your guess before clicking next" />
+        <PopupMessage
+          trigger={state.validationTrigger}
+          message="Please enter your guess before submitting"
+          tone="info"
+        />
         <PopupMessage id="source-error-message" trigger={sourceError.trigger} message={sourceError.text} />
-        <p id="result"></p>
       </div>
 
       <RoundResultPopup
-        result={state.roundResult}
+        result={resultShown}
         revealedTitle={state.currentAcceptedAnswers[0]}
-        onContinue={actions.continueAfterReveal}
+        round={state.questionsAnswered}
+        totalRounds={TOTAL_QUESTIONS}
+        score={state.score}
+        onContinue={handleContinue}
       />
 
-      <IncorrectGuessPopup trigger={state.incorrectToastTrigger} hide={Boolean(state.roundResult)} />
+      <IncorrectGuessPopup
+        trigger={state.incorrectToastTrigger}
+        hide={Boolean(state.roundResult)}
+        remainingGuesses={state.remainingGuesses}
+      />
 
       <ScorePopup
         visible={state.phase === "gameOver"}

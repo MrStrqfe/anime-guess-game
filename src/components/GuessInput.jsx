@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchSuggestions } from "../api/jikan";
 
-// The guess text box with an autocomplete dropdown of anime titles.
-// The parent owns the input value; this component only manages suggestions.
-export default function GuessInput({ inputRef, value, onChange, onSubmitEnter }) {
+// The guess row: pill text box with an autocomplete dropdown, plus the blue
+// Submit pill beside it. The parent owns the input value and submit logic;
+// this component only manages suggestions.
+export default function GuessInput({
+  inputRef,
+  value,
+  onChange,
+  onSubmitEnter,
+  submitVisible,
+  onSubmit,
+}) {
   const [suggestions, setSuggestions] = useState([]);
   const containerRef = useRef(null);
   // Set when the value change came from clicking a suggestion, so the fetch
@@ -44,13 +52,13 @@ export default function GuessInput({ inputRef, value, onChange, onSubmitEnter })
   }, []);
 
   return (
-    <div className="mx-auto mt-[clamp(10px,1.6vh,18px)] w-[min(100%,640px)]">
-      <div className="relative w-full" ref={containerRef}>
+    <div className="flex gap-2.5 mt-[18px] relative">
+      <div className="relative flex-1" ref={containerRef}>
         <input
           type="text"
           id="guess-input"
           ref={inputRef}
-          placeholder="Enter anime title here..."
+          placeholder="Name this anime…"
           autoComplete="off"
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -76,6 +84,17 @@ export default function GuessInput({ inputRef, value, onChange, onSubmitEnter })
           ))}
         </ul>
       </div>
+      {submitVisible && (
+        <button
+          id="submit-btn"
+          className="h-[46px] px-[26px] rounded-[980px] border-none bg-accent text-white
+            font-medium text-[15px] tracking-[-0.01em] cursor-pointer shrink-0
+            transition-colors duration-200 hover:bg-accent-hover"
+          onClick={onSubmit}
+        >
+          Submit
+        </button>
+      )}
     </div>
   );
 }

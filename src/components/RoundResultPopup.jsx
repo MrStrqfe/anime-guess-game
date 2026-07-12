@@ -1,8 +1,16 @@
-import Confetti from "./Confetti";
+import Icon, { PATHS } from "./icons";
 
-// End-of-round popup: green "Correct!" with confetti, or red "Oops!" with
-// the right answer. Hidden while `result` is null (i.e. mid-round).
-export default function RoundResultPopup({ result, revealedTitle, onContinue }) {
+// End-of-round sheet: blue check badge for a correct guess, red × for a
+// miss, with the revealed title as the hero. Hidden while `result` is null
+// (i.e. mid-round). `round`/`score` feed the quiet meta line.
+export default function RoundResultPopup({
+  result,
+  revealedTitle,
+  round,
+  totalRounds,
+  score,
+  onContinue,
+}) {
   const correct = result?.correct ?? true;
   const hidden = result === null;
 
@@ -11,38 +19,33 @@ export default function RoundResultPopup({ result, revealedTitle, onContinue }) 
       id="correct-guess-popup"
       className={`popup ${hidden ? "hidden" : ""} correct-popup ${correct ? "" : "wrong-answer"}`}
     >
-      <div className="popup-content result-card">
-        {/* Confetti rains over the whole card, behind the content */}
-        <Confetti active={!hidden && correct} />
-
-        <div className="result-badge">
-          <i className={`fas ${correct ? "fa-check" : "fa-times"}`}></i>
+      <div className="sheet w-[min(420px,100%)] pt-9 pb-[30px]">
+        <div
+          className="w-[60px] h-[60px] rounded-full mx-auto mb-[18px] flex items-center justify-center"
+          style={{ background: correct ? "#0071e3" : "#ff453a" }}
+        >
+          <Icon path={correct ? PATHS.check : PATHS.cross} size={26} fill="#ffffff" />
         </div>
 
-        <div className="popup-header">
-          <h2>{correct ? "Correct!" : "Oops!"}</h2>
+        <h2 className="m-0 text-[24px] font-semibold tracking-[-0.025em] text-light">
+          {correct ? "Correct" : "Not this time"}
+        </h2>
+        <p className="mt-1.5 mb-0 text-[14px] text-dim tracking-[-0.01em]">
+          {correct ? "You named it." : "The answer was"}
+        </p>
+
+        <div className="mt-[18px] mb-1.5 text-[clamp(20px,3vw,26px)] font-semibold tracking-[-0.02em] leading-[1.25] text-light">
+          <span id="revealed-anime-title">{revealedTitle}</span>
         </div>
 
-        <div className="popup-body">
-          <p className="result-subtitle">
-            {correct ? "You guessed it right!" : "The correct answer was:"}
-          </p>
-          <div className="anime-title-reveal">
-            <span id="revealed-anime-title">{revealedTitle}</span>
-          </div>
-          {correct && (
-            <div className="score-added">
-              +1 <i className="fas fa-star"></i>
-            </div>
-          )}
-        </div>
+        <p className="mt-3.5 mb-0 text-[13px] text-tert tracking-[-0.01em] [font-variant-numeric:tabular-nums]">
+          Round {round} of {totalRounds}
+          <span className="mx-[7px] opacity-50">·</span>Score {score}
+        </p>
 
-        <div className="popup-footer">
-          <button id="continue-btn" className="neon-btn continue-btn" onClick={onContinue}>
-            <span>Continue</span>
-            <i className="fas fa-arrow-right"></i>
-          </button>
-        </div>
+        <button id="continue-btn" className="cta-btn mt-6" onClick={onContinue}>
+          Continue
+        </button>
       </div>
     </div>
   );

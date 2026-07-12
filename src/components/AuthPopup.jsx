@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import Icon, { PATHS } from "./icons";
 
-// Sign In / Sign Up popup. One form handles both modes (toggled by the link
+// Sign In / Sign Up sheet. One form handles both modes (toggled by the link
 // at the bottom), plus Google/Discord OAuth buttons.
 export default function AuthPopup({ visible, onClose }) {
   const { signIn, signUp, signInWithProvider } = useAuth();
@@ -47,24 +48,20 @@ export default function AuthPopup({ visible, onClose }) {
   }
 
   return (
-    <div className={`popup ${visible ? "" : "hidden"}`}>
-      <div className="popup-content anime-popup auth-popup">
-        <button
-          className="absolute top-3 right-3.5 z-[2] text-dim text-[1.2rem] cursor-pointer
-            transition-colors duration-200 hover:text-primary"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          <i className="fas fa-times"></i>
+    <div className={`popup ${visible ? "" : "hidden"} z-[1050]`}>
+      <div className="sheet auth-popup w-[min(400px,100%)] pb-[26px]">
+        <button className="sheet-close" onClick={onClose} aria-label="Close">
+          <Icon path={PATHS.cross} size={12} />
         </button>
-        <div className="popup-header">
-          <h2>
-            {isSignup ? "Create Account" : "Sign In"} <i className="fas fa-user"></i>
-          </h2>
-        </div>
+        <h2 className="m-0 mb-1 text-[24px] font-semibold tracking-[-0.025em] text-light">
+          {isSignup ? "Create Account" : "Sign In"}
+        </h2>
+        <p className="m-0 mb-[22px] text-[13px] text-dim tracking-[-0.01em]">
+          Track your stats across games.
+        </p>
 
         {/* `auth-input` / `auth-error` stay as bare class hooks for the E2E scripts */}
-        <form className="flex flex-col gap-3 mx-auto max-w-[360px]" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-2.5" onSubmit={handleSubmit}>
           <input
             type="email"
             className={authInputClasses}
@@ -84,35 +81,36 @@ export default function AuthPopup({ visible, onClose }) {
             minLength={6}
             autoComplete={isSignup ? "new-password" : "current-password"}
           />
-          {error && <p className="auth-error text-danger text-[0.88rem]">{error}</p>}
-          <button
-            type="submit"
-            className="neon-btn mt-2 disabled:opacity-60 disabled:cursor-wait"
-            disabled={busy}
-          >
-            <span>{busy ? "Please wait..." : isSignup ? "Sign Up" : "Sign In"}</span>
-            <i className="fas fa-arrow-right"></i>
+          {error && (
+            <p className="auth-error m-0 text-[13px] text-danger tracking-[-0.01em]">{error}</p>
+          )}
+          <button type="submit" className="cta-btn mt-1.5 w-full" disabled={busy}>
+            {busy ? "Please wait…" : isSignup ? "Sign Up" : "Sign In"}
           </button>
         </form>
 
-        <div className="mt-[1.2rem] mb-[0.8rem] text-dim text-[0.78rem] uppercase tracking-[2px]">
-          or continue with
+        <div className="mt-5 mb-3.5 flex items-center gap-3">
+          <div className="flex-1 h-px bg-[rgba(255,255,255,0.1)]"></div>
+          <span className="text-[11px] tracking-[0.08em] uppercase text-tert">
+            or continue with
+          </span>
+          <div className="flex-1 h-px bg-[rgba(255,255,255,0.1)]"></div>
         </div>
 
-        <div className="flex justify-center gap-3">
+        <div className="flex gap-2.5 justify-center">
           <button className={oauthBtnClasses} onClick={() => handleProvider("google")}>
-            <i className="fab fa-google"></i> Google
+            Google
           </button>
           <button className={oauthBtnClasses} onClick={() => handleProvider("discord")}>
-            <i className="fab fa-discord"></i> Discord
+            Discord
           </button>
         </div>
 
-        <p className="mt-[1.2rem] text-dim text-[0.88rem]">
+        <p className="mt-5 mb-0 text-[13px] text-dim tracking-[-0.01em]">
           {isSignup ? "Already have an account?" : "No account yet?"}{" "}
           <button
             type="button"
-            className="text-accent text-[0.88rem] font-body underline underline-offset-[3px] cursor-pointer"
+            className="bg-transparent border-none p-0 text-link text-[13px] font-body cursor-pointer"
             onClick={() => {
               setMode(isSignup ? "signin" : "signup");
               setError("");
@@ -121,7 +119,7 @@ export default function AuthPopup({ visible, onClose }) {
             {isSignup ? "Sign in" : "Sign up"}
           </button>
         </p>
-        <p className="mt-[0.6rem] text-[rgba(214,226,255,0.4)] text-[0.78rem]">
+        <p className="mt-2 mb-0 text-[12px] text-faint tracking-[-0.01em]">
           You can keep playing as a guest — stats just won't be saved.
         </p>
       </div>
@@ -130,13 +128,12 @@ export default function AuthPopup({ visible, onClose }) {
 }
 
 const authInputClasses =
-  "auth-input w-full px-[18px] py-3 text-[0.95rem] font-body text-light bg-[rgba(5,8,18,0.75)] " +
-  "border border-line rounded-lg transition-[border-color,box-shadow] duration-200 " +
-  "focus:outline-none focus:border-accent focus:shadow-[0_0_0_3px_rgba(41,216,255,0.18)] " +
-  "placeholder:text-[rgba(214,226,255,0.4)]";
+  "auth-input w-full box-border h-11 px-[18px] rounded-xl font-body text-[14px] tracking-[-0.01em] " +
+  "text-light bg-fill border border-line transition-[border-color,box-shadow] duration-200 " +
+  "focus:outline-none focus:border-accent focus:shadow-[0_0_0_4px_rgba(0,113,227,0.32)] " +
+  "placeholder:text-[rgba(245,245,247,0.36)]";
 
 const oauthBtnClasses =
-  "bg-[rgba(140,170,255,0.06)] text-light border border-line rounded-lg px-[22px] py-2.5 " +
-  "text-[0.9rem] font-body cursor-pointer inline-flex items-center gap-2 " +
-  "transition-[border-color,background-color] duration-200 " +
-  "hover:border-accent hover:bg-[rgba(41,216,255,0.08)]";
+  "flex-1 h-[42px] rounded-[980px] bg-fill border border-line text-light font-body " +
+  "text-[14px] tracking-[-0.01em] cursor-pointer transition-colors duration-200 " +
+  "hover:bg-fill-hover";

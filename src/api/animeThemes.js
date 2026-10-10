@@ -70,9 +70,13 @@ export async function fetchAnimeThemes({ year = null } = {}) {
   });
   if (year) params.set("filter[year]", String(year));
 
+  // HTTP GET Request
   const response = await fetch(`https://api.animethemes.moe/anime?${params}`);
 
-  if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+  // Check to see if HTTP status code is 200-299
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}`);
+  }
 
   const { anime } = await response.json();
   const videoClips = {};

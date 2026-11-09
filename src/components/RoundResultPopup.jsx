@@ -2,13 +2,15 @@ import Icon, { PATHS } from "./icons";
 
 // End-of-round sheet: blue check badge for a correct guess, red × for a
 // miss, with the revealed title as the hero. Hidden while `result` is null
-// (i.e. mid-round). `round`/`score` feed the quiet meta line.
+// (i.e. mid-round). `round`/`score` feed the quiet meta line; `points`
+// (daily only) shows what this anime earned.
 export default function RoundResultPopup({
   result,
   revealedTitle,
   round,
   totalRounds,
   score,
+  points,
   onContinue,
 }) {
   const correct = result?.correct ?? true;
@@ -37,6 +39,17 @@ export default function RoundResultPopup({
         <div className="mt-[18px] mb-1.5 text-[clamp(20px,3vw,26px)] font-semibold tracking-[-0.02em] leading-[1.25] text-light">
           <span id="revealed-anime-title">{revealedTitle}</span>
         </div>
+
+        {points !== undefined && (
+          <p
+            id="round-points"
+            className={`mt-2 mb-0 text-[15px] font-medium tracking-[-0.01em] [font-variant-numeric:tabular-nums] ${
+              points > 0 ? "text-link" : "text-dim"
+            }`}
+          >
+            {points > 0 ? `+${points} points` : "No points"}
+          </p>
+        )}
 
         <p className="mt-3.5 mb-0 text-[13px] text-tert tracking-[-0.01em] [font-variant-numeric:tabular-nums]">
           Round {round} of {totalRounds}

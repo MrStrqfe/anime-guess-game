@@ -1,7 +1,27 @@
-import { useEffect, useRef, useState } from "react";
-import { useGameState, MAX_GUESSES, TOTAL_QUESTIONS } from "./hooks/useGameState";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useGameState, MAX_GUESSES } from "./hooks/useGameState";
 import { useAuth } from "./context/AuthContext";
-import { recordGame } from "./api/stats";
+import { recordGame, recordDaily } from "./api/stats";
+import {
+  getPuzzleNumber,
+  getDailyAnime,
+  searchPool,
+  STAGE_SECONDS,
+  STAGE_POINTS,
+  stageIndex,
+  stageLimit,
+} from "./lib/daily";
+import {
+  loadProgress,
+  saveProgress,
+  loadStreak,
+  recordFinished,
+  currentStreak,
+} from "./lib/dailyProgress";
+import ModeSwitch from "./components/ModeSwitch";
+import DailyResultPopup from "./components/DailyResultPopup";
+import ClipTimeline from "./components/ClipTimeline";
+import HintList from "./components/HintList";
 import IntroPopup from "./components/IntroPopup";
 import Header from "./components/Header";
 import VideoPlayer from "./components/VideoPlayer";
@@ -23,9 +43,42 @@ function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+// Daily mode: the blur eases at each stage (keyed by guesses remaining).
+// Practice always uses the full blur.
+const DAILY_BLUR = {
+  3: { px: 10, scale: 1.12 },
+  2: { px: 6, scale: 1.08 },
+  1: { px: 3, scale: 1.04 },
+};
+
 export default function App() {
   const { state, actions } = useGameState();
   const { user, enabled: authEnabled } = useAuth();
+  const isDaily = state.mode === "daily";
+
+  // Today's puzzle is fixed for the life of the page; the result sheet's
+  // countdown reloads the page at midnight to pick up the next one.
+  const [puzzleNumber] = useState(() => getPuzzleNumber());
+  const dailyAnime = useMemo(() => getDailyAnime(puzzleNumber), [puzzleNumber]);
+  // The clip map the game reducer expects, in play order. The display title
+  // goes first so the result sheet reveals it; `hints` unlock stage by stage.
+  const dailyClips = useMemo(
+    () =>
+      Object.fromEntries(
+        dailyAnime.map((anime) => [
+          anime.videoUrl,
+          {
+            answers: [anime.title, ...anime.answers.filter((a) => a !== anime.title)],
+            hints: anime.hints,
+          },
+        ])
+      ),
+    [dailyAnime]
+  );
+  const [dailyStreak, setDailyStreak] = useState(() => {
+    const streak = loadStreak();
+    return { current: currentStreak(streak, puzzleNumber), longest: streak.longest };
+  });
   const videoRef = useRef(null);
   const guessInputRef = useRef(null);
   const cardRef = useRef(null);
@@ -50,20 +103,69 @@ export default function App() {
     () => localStorage.getItem("intro-seen") !== "true"
   );
 
-  // Returning players skip the intro and land directly in a running game.
+  // Starts today's daily, resuming any saved progress (or straight to the
+  // results if it's already done).
+  function startDaily() {
+    actions.startDaily(dailyClips, puzzleNumber, loadProgress(puzzleNumber) ?? {});
+  }
+
+  // Returning players skip the intro and land directly in today's daily.
   useEffect(() => {
     if (localStorage.getItem("intro-seen") === "true") {
-      actions.startGame();
+      startDaily();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Closes the How to Play popup; on a first visit this also starts the game.
+  // Closes the How to Play popup; on a first visit this also starts the daily.
   function handleIntroClose() {
     localStorage.setItem("intro-seen", "true");
     setIntroOpen(false);
-    if (state.phase === "intro") actions.startGame();
+    if (state.phase === "intro") startDaily();
   }
+
+  // Daily <-> Practice. Leaving the daily is safe: its progress is saved
+  // after every guess and restored when switching back. A practice game in
+  // progress is discarded.
+  function handleModeChange(mode) {
+    videoRef.current?.pause();
+    if (mode === "daily") startDaily();
+    else actions.startGame();
+  }
+
+  // Save daily progress after every guess, so a refresh can't reset guesses.
+  // Once a round is revealed its guesses are spent, so the next round starts
+  // with a full set.
+  useEffect(() => {
+    if (!isDaily || state.puzzleNumber !== puzzleNumber) return;
+    saveProgress(puzzleNumber, {
+      attempts: state.roundAttempts,
+      remainingGuesses: state.revealed ? MAX_GUESSES : state.remainingGuesses,
+    });
+  }, [isDaily, state.puzzleNumber, state.roundAttempts, state.remainingGuesses, state.revealed, puzzleNumber]);
+
+  // When today's last anime is answered: update the browser streak, and for
+  // signed-in players record the result to their account (the server ignores
+  // repeats, so revisits are harmless and pick up the account's streak).
+  const dailyDone = isDaily && state.roundAttempts.length >= state.totalQuestions;
+  useEffect(() => {
+    if (!dailyDone || state.puzzleNumber !== puzzleNumber) return;
+    const local = recordFinished(puzzleNumber, state.roundAttempts);
+    setDailyStreak({ current: local.current, longest: local.longest });
+    if (!user) return;
+    let cancelled = false;
+    recordDaily(puzzleNumber, state.roundAttempts)
+      .then((server) => {
+        if (!cancelled && server) {
+          setDailyStreak({ current: server.current, longest: server.longest });
+        }
+      })
+      .catch(console.error);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dailyDone, user]);
 
   // Keep local playback UI state in sync with the underlying <video> element.
   // Volume and mute are persisted to localStorage so they survive refreshes
@@ -107,10 +209,12 @@ export default function App() {
       recordedRef.current = false;
       return;
     }
+    // Daily results are recorded separately (above), not as practice games.
+    if (state.mode !== "practice") return;
     if (recordedRef.current || !user || state.roundResults.length === 0) return;
     recordedRef.current = true;
     recordGame(state.roundResults).catch(console.error);
-  }, [state.phase, user, state.roundResults]);
+  }, [state.phase, state.mode, user, state.roundResults]);
 
   // Wrong-but-not-final guess: shake the input (±3px, Apple-subtle) and
   // refocus it for the next attempt.
@@ -132,6 +236,21 @@ export default function App() {
       );
     }
   }, [state.incorrectToastTrigger]);
+
+  // Daily: when a wrong guess or Skip unlocks the next stage, replay the clip
+  // from the start so the player hears the longer cut straight away. (Only
+  // within the same clip, so resuming a saved stage doesn't autoplay.)
+  const lastStageRef = useRef({ url: "", remaining: MAX_GUESSES });
+  useEffect(() => {
+    const last = lastStageRef.current;
+    lastStageRef.current = { url: state.currentClipUrl, remaining: state.remainingGuesses };
+    if (!isDaily || state.revealed) return;
+    if (last.url !== state.currentClipUrl || state.remainingGuesses >= last.remaining) return;
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    video.play().catch(() => {});
+  }, [isDaily, state.currentClipUrl, state.remainingGuesses, state.revealed]);
 
   // Round verdict choreography. A correct answer earns a soft blue pulse on
   // the card first, with the result sheet following ~650ms later; a miss
@@ -214,12 +333,20 @@ export default function App() {
     actions.submitGuess(guess);
   }
 
+  // Daily: spend a turn without guessing to unlock the next stage, or give
+  // up on the last one.
+  function handleSkip() {
+    if (!state.submitVisible) return;
+    videoRef.current?.pause();
+    actions.skip();
+  }
+
   // Dismisses the round-result sheet and moves on. Between rounds the card
   // content fades down and out (280ms), the clip swaps, and the new round
   // fades back up (500ms) — skipped for reduced motion and at game end.
   function handleContinue() {
     const card = cardRef.current;
-    const lastRound = state.questionsAnswered >= TOTAL_QUESTIONS;
+    const lastRound = state.questionsAnswered >= state.totalQuestions;
     if (!card || lastRound || prefersReducedMotion()) {
       actions.continueAfterReveal();
       return;
@@ -314,6 +441,17 @@ export default function App() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   });
 
+  // Daily stage UI: clip limit, Skip label and hints for the anime in play.
+  const stage = stageIndex(state.remainingGuesses);
+  const dailyLive = isDaily && state.phase !== "intro";
+  const clipLimit = state.revealed ? STAGE_SECONDS[STAGE_SECONDS.length - 1] : stageLimit(state.remainingGuesses);
+  const skipLabel =
+    stage < STAGE_SECONDS.length - 1
+      ? `Skip +${STAGE_SECONDS[stage + 1] - STAGE_SECONDS[stage]}s`
+      : "Give up";
+  const currentHints = state.videoClips[state.currentClipUrl]?.hints ?? [];
+  const lastAttempt = state.roundAttempts[state.roundAttempts.length - 1];
+
   return (
     <>
       {introOpen && (
@@ -337,11 +475,18 @@ export default function App() {
 
       <Header />
 
-      <div className="game-card w-fit max-phone:w-full" ref={cardRef}>
+      <ModeSwitch mode={state.mode} onChange={handleModeChange} />
+
+      <div
+        className={`game-card w-fit max-phone:w-full ${dailyLive ? "daily-stage" : ""}`}
+        ref={cardRef}
+      >
         <VideoPlayer
           ref={videoRef}
           src={state.currentClipUrl}
           revealed={state.revealed}
+          blur={isDaily ? DAILY_BLUR[state.remainingGuesses] : undefined}
+          maxTime={isDaily && !state.revealed ? stageLimit(state.remainingGuesses) : undefined}
           onHoverChange={setControlsHover}
         >
           <MediaControls
@@ -356,8 +501,26 @@ export default function App() {
           />
         </VideoPlayer>
 
+        {dailyLive && (
+          <>
+            <ClipTimeline
+              videoRef={videoRef}
+              limit={clipLimit}
+              skipLabel={skipLabel}
+              onSkip={handleSkip}
+              disabled={!state.submitVisible}
+            />
+            <HintList
+              hints={currentHints}
+              unlocked={state.revealed ? currentHints.length : stage}
+              unlockAt={STAGE_SECONDS.slice(1).map((s) => (s >= 60 ? `${s / 60}:00` : `${s}s`))}
+            />
+          </>
+        )}
+
         <GuessInput
           inputRef={guessInputRef}
+          localSearch={isDaily ? searchPool : undefined}
           value={state.guessValue}
           onChange={actions.setGuessValue}
           onSubmitEnter={handleSubmit}
@@ -371,15 +534,19 @@ export default function App() {
             remainingGuesses={state.remainingGuesses}
             maxGuesses={MAX_GUESSES}
             round={state.questionsAnswered + 1}
-            totalRounds={TOTAL_QUESTIONS}
+            totalRounds={state.totalQuestions}
+            label={isDaily ? `Daily #${puzzleNumber}` : undefined}
           />
-          <ActionButtons
-            usingOnlineClips={state.usingOnlineClips}
-            sourceLoading={sourceLoading}
-            onToggleSource={handleToggleSource}
-            selectedYear={state.selectedYear}
-            onSelectYear={handleSelectYear}
-          />
+          {/* Clip source and year only apply to Practice. */}
+          {!isDaily && (
+            <ActionButtons
+              usingOnlineClips={state.usingOnlineClips}
+              sourceLoading={sourceLoading}
+              onToggleSource={handleToggleSource}
+              selectedYear={state.selectedYear}
+              onSelectYear={handleSelectYear}
+            />
+          )}
         </div>
       </div>
 
@@ -405,8 +572,9 @@ export default function App() {
         result={resultShown}
         revealedTitle={state.currentAcceptedAnswers[0]}
         round={state.questionsAnswered}
-        totalRounds={TOTAL_QUESTIONS}
+        totalRounds={state.totalQuestions}
         score={state.score}
+        points={isDaily && lastAttempt !== undefined ? STAGE_POINTS[lastAttempt] : undefined}
         onContinue={handleContinue}
       />
 
@@ -414,14 +582,24 @@ export default function App() {
         trigger={state.incorrectToastTrigger}
         hide={Boolean(state.roundResult)}
         remainingGuesses={state.remainingGuesses}
+        skipped={isDaily && state.lastMissSkipped}
+      />
+
+      <DailyResultPopup
+        visible={isDaily && state.phase === "gameOver"}
+        puzzleNumber={puzzleNumber}
+        titles={dailyAnime.map((anime) => anime.title)}
+        attempts={state.roundAttempts}
+        streak={dailyStreak}
+        onPractice={() => handleModeChange("practice")}
       />
 
       <ScorePopup
-        visible={state.phase === "gameOver"}
+        visible={!isDaily && state.phase === "gameOver"}
         score={state.score}
         // A year with fewer than 10 clips ends the game early; show the real
         // number of rounds played (|| guards the 0/0 NaN-accuracy case).
-        totalQuestions={state.questionsAnswered || TOTAL_QUESTIONS}
+        totalQuestions={state.questionsAnswered || state.totalQuestions}
         onPlayAgain={actions.playAgain}
         signedIn={Boolean(user)}
         onOpenAuth={authEnabled ? () => setAuthPopupOpen(true) : null}

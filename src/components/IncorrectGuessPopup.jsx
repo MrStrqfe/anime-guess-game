@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 
-// Wrong-guess toast ("Not quite — N guesses left"), shown for ~2.2 seconds
+// Wrong-guess toast ("Not quite — N guesses left", or "Skipped — hint
+// unlocked" after a daily Skip), shown for ~2.2 seconds
 // after each wrong (non-final) guess. `trigger` is a counter bumped per
 // wrong guess; `hide` force-closes the toast early when the round-result
 // sheet takes over the screen.
-export default function IncorrectGuessPopup({ trigger, hide, remainingGuesses }) {
+export default function IncorrectGuessPopup({ trigger, hide, remainingGuesses, skipped }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -24,8 +25,10 @@ export default function IncorrectGuessPopup({ trigger, hide, remainingGuesses })
       className={`toast-message ${visible ? "" : "hidden"}`}
       key={trigger}
     >
-      <span className="dot" style={{ background: "#ff453a" }}></span>
-      Not quite — {remainingGuesses} {remainingGuesses === 1 ? "guess" : "guesses"} left
+      <span className="dot" style={{ background: skipped ? "#ffd60a" : "#ff453a" }}></span>
+      {skipped
+        ? "Skipped — hint unlocked"
+        : `Not quite — ${remainingGuesses} ${remainingGuesses === 1 ? "guess" : "guesses"} left`}
     </div>
   );
 }

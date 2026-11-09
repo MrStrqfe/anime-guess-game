@@ -564,3 +564,17 @@ select:focus-visible,
 
   :root { --chrome-h: 14rem; }
 }
+
+/* Daily mode adds the clip timeline and hint rows under the video, so the
+   clip shrinks a little more to keep the card on one screen. */
+.daily-stage {
+  --chrome-h: 26rem;
+  --clip-w: min(
+    calc(100vw - 2 * (var(--page-pad) + var(--card-pad)) - 8px),
+    860px,
+    calc((100dvh - var(--chrome-h)) * 16 / 9)
+  );
+}
+@media (max-height: 640px) {
+  .daily-stage { --chrome-h: 20rem; }
+}

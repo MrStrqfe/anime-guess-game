@@ -11,7 +11,8 @@ function selectBestQualityVideo(videos) {
 }
 
 // Expands one title into the alternate ways a player might type it.
-function getTitleVariants(title) {
+// Also used by scripts/build-daily-pool.mjs to build daily-mode answers.
+export function getTitleVariants(title) {
   const variants = [title];
 
   // Accept the title without its subtitle, e.g. "Demon Slayer: ..." -> "Demon Slayer"

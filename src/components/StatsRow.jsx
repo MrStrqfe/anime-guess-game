@@ -1,6 +1,7 @@
 // Guesses-remaining dots (Apple Watch style: available dots are bright,
 // spent ones dim and shrink) plus a quiet "Round N of 10 · Score N" line.
-export default function StatsRow({ score, remainingGuesses, maxGuesses, round, totalRounds }) {
+// `label` prefixes that line in daily mode ("Daily #12").
+export default function StatsRow({ score, remainingGuesses, maxGuesses, round, totalRounds, label }) {
   return (
     <div className="flex items-center gap-3.5 max-phone:justify-center">
       <div className="flex items-center gap-1.5" aria-label="Guesses remaining" title="Guesses remaining">
@@ -20,7 +21,13 @@ export default function StatsRow({ score, remainingGuesses, maxGuesses, round, t
         })}
       </div>
       <div className="text-[13px] text-dim tracking-[-0.01em] [font-variant-numeric:tabular-nums]">
-        Round {Math.min(round, totalRounds)} of {totalRounds}
+        {label && (
+          <>
+            <span className="text-light font-medium">{label}</span>
+            <span className="mx-[7px] opacity-50">·</span>
+          </>
+        )}
+        {label ? "Anime" : "Round"} {Math.min(round, totalRounds)} of {totalRounds}
         <span className="mx-[7px] opacity-50">·</span>
         Score{" "}
         <span id="score" className="text-light font-medium">

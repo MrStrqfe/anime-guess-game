@@ -1,4 +1,5 @@
 -- Run this once in the Supabase SQL Editor (Dashboard -> SQL Editor -> New query).
+-- Then run daily.sql for Daily-mode results and streaks.
 --
 -- Security model: clients hold only the anon key. The profiles table has a
 -- select-own policy and deliberately NO insert/update/delete policies, so the

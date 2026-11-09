@@ -29,6 +29,8 @@ An interactive web game that challenges users to identify anime series by watchi
 
 ## Features
 
+- **Daily mode** (the default screen): the same three anime for everyone each day, drawn from the 500 most popular TV anime. Clips unlock in stages (8s → 30s → 1 min) with a hint at each stage, and earlier guesses score more points. Results are shareable as an emoji grid, with a day streak and a countdown to the next puzzle.
+- **Practice mode**: the original ten-round game, with Featured/Library clips and a year filter.
 - Guess anime by watching opening clips.
 - Blurred videos for increased challenge.
 - Three guesses allowed per video.
@@ -45,6 +47,33 @@ An interactive web game that challenges users to identify anime series by watchi
 ---
 
 ## How to Play
+
+### Daily
+
+Everyone gets the same three anime each day; a new puzzle starts at your local midnight.
+
+1. Listen to the first **8 seconds** of the blurred opening and guess the anime.
+2. A wrong guess or **Skip** unlocks the next stage: the clip extends to **30 seconds**, then **1 minute**, the blur eases, and a hint appears (genres and season first, then studio and main character). On the last stage, Skip becomes **Give up**.
+3. Earlier guesses score more:
+
+   | Solved at | Points |
+   |---|---|
+   | 8 seconds, no hints | 100 |
+   | 30 seconds, 1 hint | 60 |
+   | 1 minute, 2 hints | 30 |
+   | Missed | 0 |
+
+4. After all three (up to 300 points), share your result:
+   ```
+   AniBlur Daily #12 · 190/300
+   🟩🟥🟨
+   ```
+   🟩 8s · 🟨 30s · 🟧 1 min · 🟥 missed
+5. Your progress is saved after every guess, so refreshing can't reset a round. Come back tomorrow to keep your day streak going.
+
+### Practice
+
+Switch to **Practice** at the top for a ten-round game you can replay any time.
 
 1. Click **Start Game**.
 2. Watch the blurred anime opening.
@@ -69,6 +98,8 @@ Sign in from the top-right corner (email/password, Google, or Discord). When sig
 - **Games played**, **total correct**, and **best score** (best score only counts full 10-question games)
 - **Average score** and **accuracy**
 - **Current and longest streak** — streaks count consecutive correct rounds and carry across games; a missed round resets the current streak
+
+Daily results are saved too: **dailies played**, **top score** and **average points**, **perfect days** (all three at 8 seconds, 300 points), and your **day streak** (consecutive days with a finished daily, any score). Guests keep their daily progress and streak in the browser.
 
 Stats are stored in [Supabase](https://supabase.com) (Postgres + auth). All stat aggregation happens server-side in a database function — the client can only report a game's round results, never write stats directly. Guests can always play; their results just aren't saved.
 
@@ -125,7 +156,12 @@ npm install
 npm run dev      # start the local dev server
 npm run build    # production build to dist/
 npm run preview  # preview the production build locally
+npm run build:pool  # rebuild the Daily anime pool (src/data/dailyPool.json)
 ```
+
+**Daily pool.** `scripts/build-daily-pool.mjs` takes the 500 most popular TV anime from AniList, drops sequels, looks up each one's first clean opening on AnimeThemes, and writes `src/data/dailyPool.json` (about 330 anime). The file is committed so every player gets the same picks. Only rebuild it deliberately: a new pool reshuffles every future day's anime.
+
+**Preview other days.** In dev, add `?day=N` to the URL (e.g. `http://localhost:5173/?day=5`) to play Daily #N. Previews keep their progress separately, so they don't touch your real streak.
 
 To enable accounts locally, copy `.env.example` to `.env.local` and fill in your Supabase project's URL and anon key. Without these, the game runs in guest-only mode (no sign-in UI) — everything else works normally.
 
@@ -135,6 +171,7 @@ To enable accounts locally, copy `.env.example` to `.env.local` and fill in your
 
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Run `supabase/schema.sql` once in the SQL Editor — it creates the `profiles` table, row-level security policies, a signup trigger, and the `record_game` function (the only write path for stats).
+   Then run `supabase/daily.sql` — it adds the `daily_results` table, the daily columns on `profiles`, and the `record_daily` function.
 3. **Authentication → Sign In / Providers**: Email is enabled by default (turning *Confirm email* off is recommended unless you configure custom SMTP — the built-in email service is heavily rate-limited). For Google/Discord, create OAuth apps pointing at `https://<project-ref>.supabase.co/auth/v1/callback` and paste their credentials in.
 4. **Authentication → URL Configuration**: set the Site URL to your deployed URL and add `http://localhost:5173/**` plus `https://<your-site>/**` to the redirect allowlist.
 5. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as GitHub Actions secrets so the deploy workflow builds with them (see `.github/workflows/deploy.yml`). The anon key is safe to expose in the client bundle; row-level security is the access boundary.

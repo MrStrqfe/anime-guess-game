@@ -1,6 +1,7 @@
 import { useReducer, useCallback } from "react";
 import { fallbackClips } from "../data/fallbackClips";
 import { fetchAnimeThemes } from "../api/animeThemes";
+import { DAILY_ROUNDS, STAGE_POINTS, pointsFor } from "../lib/daily";
 
 export const MAX_GUESSES = 3;
 export const TOTAL_QUESTIONS = 10;
@@ -16,19 +17,25 @@ function normalizeTitle(text) {
     .trim();
 }
 
-// Picks a random clip that hasn't been played yet this game.
+// Picks a clip that hasn't been played yet this game: random in practice,
+// in listed order in daily mode (the daily's three anime have a fixed order).
 // Returns null when every clip has been used, which ends the game early.
-function pickNextClip(videoClips, usedClips) {
+function pickNextClip(videoClips, usedClips, ordered = false) {
   const clipUrls = Object.keys(videoClips);
   const unusedClips = clipUrls.filter((url) => !usedClips.includes(url));
   if (unusedClips.length === 0) return null;
 
-  const url = unusedClips[Math.floor(Math.random() * unusedClips.length)];
+  const url = ordered
+    ? unusedClips[0]
+    : unusedClips[Math.floor(Math.random() * unusedClips.length)];
   return { url, answers: videoClips[url].answers };
 }
 
 const initialState = {
   phase: "intro", // 'intro' | 'playing' | 'gameOver'
+  mode: "daily", // 'daily' | 'practice'
+  puzzleNumber: null, // daily only
+  totalQuestions: DAILY_ROUNDS, // the app opens in daily mode
   score: 0,
   questionsAnswered: 0,
   usedClips: [],
@@ -42,8 +49,10 @@ const initialState = {
   submitVisible: true,
   roundResult: null, // null | { correct: boolean }
   roundResults: [], // per-round correctness for the current game, in order
+  roundAttempts: [], // per round: guess number that got it (1-3), or 0 if missed
   guessValue: "",
   incorrectToastTrigger: 0,
+  lastMissSkipped: false, // daily: whether the last turn spent was a Skip
   validationTrigger: 0,
 };
 
@@ -51,7 +60,7 @@ const initialState = {
 // (guesses, input, reveal state), and marks the clip as used. If there are
 // no clips left it flips the game into the gameOver phase instead.
 function startRound(state, videoClips, usedClips) {
-  const next = pickNextClip(videoClips, usedClips);
+  const next = pickNextClip(videoClips, usedClips, state.mode === "daily");
   if (!next) {
     return {
       ...state,
@@ -87,9 +96,13 @@ function reducer(state, action) {
       return startRound(
         {
           ...state,
+          mode: "practice",
+          puzzleNumber: null,
+          totalQuestions: TOTAL_QUESTIONS,
           score: 0,
           questionsAnswered: 0,
           roundResults: [],
+          roundAttempts: [],
           usingOnlineClips: false,
           selectedYear: null,
           phase: "playing",
@@ -98,13 +111,61 @@ function reducer(state, action) {
         []
       );
     }
+    // Starts (or resumes) today's daily. `attempts` is the saved per-round
+    // progress and `remainingGuesses` the guesses left on the round in play,
+    // so a refresh can't hand out fresh guesses.
+    case "START_DAILY": {
+      const { videoClips, puzzleNumber, attempts = [], remainingGuesses } = action;
+      const urls = Object.keys(videoClips);
+      const usedClips = urls.slice(0, attempts.length);
+      const score = pointsFor(attempts);
+      const base = {
+        ...state,
+        mode: "daily",
+        puzzleNumber,
+        totalQuestions: urls.length,
+        score,
+        questionsAnswered: attempts.length,
+        roundResults: attempts.map((a) => a > 0),
+        roundAttempts: attempts,
+        usingOnlineClips: false,
+        selectedYear: null,
+        phase: "playing",
+      };
+
+      // Already finished today: land on the results with the last clip shown.
+      if (attempts.length >= urls.length) {
+        const lastUrl = urls[urls.length - 1];
+        return {
+          ...base,
+          videoClips,
+          usedClips: urls,
+          phase: "gameOver",
+          currentClipUrl: lastUrl,
+          currentAcceptedAnswers: videoClips[lastUrl].answers,
+          revealed: true,
+          submitVisible: false,
+          roundResult: null,
+          guessValue: "",
+        };
+      }
+
+      const next = startRound(base, videoClips, usedClips);
+      return remainingGuesses > 0 && remainingGuesses <= MAX_GUESSES
+        ? { ...next, remainingGuesses }
+        : next;
+    }
     case "SWITCH_SOURCE": {
       return startRound(
         {
           ...state,
+          mode: "practice",
+          puzzleNumber: null,
+          totalQuestions: TOTAL_QUESTIONS,
           score: 0,
           questionsAnswered: 0,
           roundResults: [],
+          roundAttempts: [],
           usingOnlineClips: action.usingOnlineClips,
           selectedYear: action.year ?? null,
         },
@@ -119,14 +180,17 @@ function reducer(state, action) {
       return { ...state, validationTrigger: state.validationTrigger + 1 };
     }
     case "SUBMIT_CORRECT": {
+      // Daily scores by stage (100 / 60 / 30); practice is 1 point a round.
+      const attempt = MAX_GUESSES - state.remainingGuesses + 1;
       return {
         ...state,
         revealed: true,
-        score: state.score + 1,
+        score: state.score + (state.mode === "daily" ? STAGE_POINTS[attempt] : 1),
         questionsAnswered: state.questionsAnswered + 1,
         submitVisible: false,
         roundResult: { correct: true },
         roundResults: [...state.roundResults, true],
+        roundAttempts: [...state.roundAttempts, attempt],
       };
     }
     case "SUBMIT_INCORRECT_RETRY": {
@@ -134,6 +198,7 @@ function reducer(state, action) {
         ...state,
         remainingGuesses: state.remainingGuesses - 1,
         incorrectToastTrigger: state.incorrectToastTrigger + 1,
+        lastMissSkipped: Boolean(action.skipped),
         guessValue: "",
       };
     }
@@ -146,17 +211,25 @@ function reducer(state, action) {
         submitVisible: false,
         roundResult: { correct: false },
         roundResults: [...state.roundResults, false],
+        roundAttempts: [...state.roundAttempts, 0],
       };
     }
     case "CONTINUE": {
-      if (state.questionsAnswered >= TOTAL_QUESTIONS) {
+      if (state.questionsAnswered >= state.totalQuestions) {
         return { ...state, phase: "gameOver", roundResult: null };
       }
       return startRound({ ...state }, state.videoClips, state.usedClips);
     }
     case "PLAY_AGAIN": {
       return startRound(
-        { ...state, score: 0, questionsAnswered: 0, roundResults: [], phase: "playing" },
+        {
+          ...state,
+          score: 0,
+          questionsAnswered: 0,
+          roundResults: [],
+          roundAttempts: [],
+          phase: "playing",
+        },
         state.videoClips,
         []
       );
@@ -172,8 +245,15 @@ function reducer(state, action) {
 export function useGameState() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
+  // Practice: the original 10-round game on the bundled clips.
   const startGame = useCallback(() => {
     dispatch({ type: "START_GAME" });
+  }, []);
+
+  // Daily: `videoClips` is today's three anime in play order; `progress` is
+  // what useDailyProgress saved ({ attempts, remainingGuesses }), if any.
+  const startDaily = useCallback((videoClips, puzzleNumber, progress = {}) => {
+    dispatch({ type: "START_DAILY", videoClips, puzzleNumber, ...progress });
   }, []);
 
   // Switches between the bundled local clips and the AnimeThemes.moe online
@@ -240,6 +320,15 @@ export function useGameState() {
     [state.currentAcceptedAnswers, state.remainingGuesses]
   );
 
+  // Daily: spend a turn without guessing, which unlocks the next stage (longer
+  // clip + a hint). On the last stage it gives up and reveals the answer.
+  const skip = useCallback(() => {
+    dispatch({
+      type: state.remainingGuesses - 1 <= 0 ? "SUBMIT_INCORRECT_FINAL" : "SUBMIT_INCORRECT_RETRY",
+      skipped: true,
+    });
+  }, [state.remainingGuesses]);
+
   const showValidationMessage = useCallback(() => {
     dispatch({ type: "SHOW_VALIDATION" });
   }, []);
@@ -256,10 +345,12 @@ export function useGameState() {
     state,
     actions: {
       startGame,
+      startDaily,
       toggleClipSource,
       selectYear,
       setGuessValue,
       submitGuess,
+      skip,
       showValidationMessage,
       continueAfterReveal,
       playAgain,

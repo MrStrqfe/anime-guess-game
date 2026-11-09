@@ -3,8 +3,10 @@ import { fetchSuggestions } from "../api/jikan";
 
 // The guess row: pill text box with an autocomplete dropdown, plus the blue
 // Submit pill beside it. The parent owns the input value and submit logic;
-// this component only manages suggestions.
+// this component only manages suggestions. `localSearch` (daily mode) shows
+// instant matches from a local title list, topped up by the online lookup.
 export default function GuessInput({
+  localSearch,
   inputRef,
   value,
   onChange,
@@ -32,13 +34,24 @@ export default function GuessInput({
       return;
     }
 
+    const local = localSearch ? localSearch(query) : [];
+    if (local.length > 0) setSuggestions(local);
+    if (local.length >= 5) return;
+
+    let cancelled = false;
     const timeout = setTimeout(async () => {
-      const results = await fetchSuggestions(query);
-      setSuggestions(results);
+      const online = await fetchSuggestions(query);
+      if (cancelled) return;
+      const seen = new Set(local.map((s) => s.title.toLowerCase()));
+      const extra = online.filter((s) => !seen.has(s.title.toLowerCase()));
+      setSuggestions([...local, ...extra].slice(0, 5));
     }, 300);
 
-    return () => clearTimeout(timeout);
-  }, [value]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [value, localSearch]);
 
   // Close the dropdown when the user clicks anywhere outside it.
   useEffect(() => {

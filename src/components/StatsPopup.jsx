@@ -16,6 +16,12 @@ function formatAccuracy(stats) {
   return `${Math.round((stats.total_correct / stats.total_answered) * 100)}%`;
 }
 
+// Average daily points (out of 300), rounded. "—" before the first daily.
+function formatDailyAverage(stats) {
+  if (!stats.daily_played) return "—";
+  return Math.round((stats.daily_total_points ?? 0) / stats.daily_played);
+}
+
 // "My Stats" sheet: fetches the signed-in user's profile row from Supabase
 // each time it opens and lays the numbers out in a grid of quiet stat tiles.
 export default function StatsPopup({ visible, onClose }) {
@@ -46,6 +52,20 @@ export default function StatsPopup({ visible, onClose }) {
       ]
     : [];
 
+  // Daily columns come from supabase/daily.sql; skip the section if that
+  // migration hasn't been run on this project yet.
+  const dailyTiles =
+    stats && stats.daily_played !== undefined
+      ? [
+          { value: stats.daily_played, label: "Dailies Played" },
+          { value: stats.daily_best_points ?? 0, label: "Top Score" },
+          { value: formatDailyAverage(stats), label: "Avg Points" },
+          { value: stats.daily_perfect, label: "Perfect Days" },
+          { value: stats.daily_current_streak, label: "Day Streak" },
+          { value: stats.daily_longest_streak, label: "Best Day Streak" },
+        ]
+      : [];
+
   return (
     <div className={`popup ${visible ? "" : "hidden"} z-[1050]`}>
       <div className="sheet stats-popup w-[min(460px,100%)] px-7 pb-7">
@@ -63,22 +83,45 @@ export default function StatsPopup({ visible, onClose }) {
           <p className="text-dim text-[14px] tracking-[-0.01em] my-6">Loading…</p>
         )}
 
+        {dailyTiles.length > 0 && (
+          <>
+            <SectionLabel>Daily</SectionLabel>
+            <TileGrid tiles={dailyTiles} />
+          </>
+        )}
         {stats && (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2.5">
-            {statTiles.map(({ value, label }) => (
-              <div
-                key={label}
-                className="bg-tile border border-line-soft rounded-[14px] pt-4 px-2.5 pb-3.5"
-              >
-                <div className="text-[26px] font-semibold tracking-[-0.02em] text-light [font-variant-numeric:tabular-nums]">
-                  {value}
-                </div>
-                <div className="text-[12px] text-dim mt-1 tracking-[-0.01em]">{label}</div>
-              </div>
-            ))}
-          </div>
+          <>
+            {dailyTiles.length > 0 && <SectionLabel>Practice</SectionLabel>}
+            <TileGrid tiles={statTiles} />
+          </>
         )}
       </div>
+    </div>
+  );
+}
+
+function SectionLabel({ children }) {
+  return (
+    <p className="mt-5 mb-2.5 first-of-type:mt-0 text-left text-[13px] font-medium tracking-[0.06em] uppercase text-dim">
+      {children}
+    </p>
+  );
+}
+
+function TileGrid({ tiles }) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2.5">
+      {tiles.map(({ value, label }) => (
+        <div
+          key={label}
+          className="bg-tile border border-line-soft rounded-[14px] pt-4 px-2.5 pb-3.5"
+        >
+          <div className="text-[26px] font-semibold tracking-[-0.02em] text-light [font-variant-numeric:tabular-nums]">
+            {value}
+          </div>
+          <div className="text-[12px] text-dim mt-1 tracking-[-0.01em]">{label}</div>
+        </div>
+      ))}
     </div>
   );
 }

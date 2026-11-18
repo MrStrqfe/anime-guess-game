@@ -43,6 +43,7 @@ const initialState = {
   usingOnlineClips: false,
   selectedYear: null, // null = all years (any clip source)
   currentClipUrl: "",
+  upcomingClipUrl: null, // the next round's clip, warmed up during the reveal
   currentAcceptedAnswers: [],
   remainingGuesses: MAX_GUESSES,
   revealed: false,
@@ -59,8 +60,17 @@ const initialState = {
 // Sets up the next round: picks a fresh clip, resets the per-round fields
 // (guesses, input, reveal state), and marks the clip as used. If there are
 // no clips left it flips the game into the gameOver phase instead.
+// The clip after this one is picked now too (`upcomingClipUrl`) so the app
+// can warm it up during the reveal sheet instead of preloading the library.
 function startRound(state, videoClips, usedClips) {
-  const next = pickNextClip(videoClips, usedClips, state.mode === "daily");
+  const ordered = state.mode === "daily";
+  // Daily order is fixed, so recompute it (a resumed daily could otherwise
+  // inherit a stale pick and skip a round); practice reuses the random pick.
+  const upcoming = ordered ? null : state.upcomingClipUrl;
+  const next =
+    upcoming && videoClips[upcoming] && !usedClips.includes(upcoming)
+      ? { url: upcoming, answers: videoClips[upcoming].answers }
+      : pickNextClip(videoClips, usedClips, ordered);
   if (!next) {
     return {
       ...state,
@@ -69,13 +79,16 @@ function startRound(state, videoClips, usedClips) {
       phase: "gameOver",
       submitVisible: false,
       roundResult: null,
+      upcomingClipUrl: null,
     };
   }
 
+  const nowUsed = [...usedClips, next.url];
   return {
     ...state,
     videoClips,
-    usedClips: [...usedClips, next.url],
+    usedClips: nowUsed,
+    upcomingClipUrl: pickNextClip(videoClips, nowUsed, ordered)?.url ?? null,
     currentClipUrl: next.url,
     currentAcceptedAnswers: next.answers,
     remainingGuesses: MAX_GUESSES,

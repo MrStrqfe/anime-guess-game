@@ -1,4 +1,8 @@
-import dailyPool from "../data/dailyPool.json" with { type: "json" };
+// Pure daily-puzzle logic. The pool itself (src/data/dailyPool.json) is NOT
+// imported here: the browser fetches it as its own content-hashed file (see
+// dailyPoolLoader.js) and Node scripts read it from disk, then both pass it
+// in. Keeping 146 KB of data out of the JS bundle means a code deploy doesn't
+// invalidate the cached pool, and vice versa.
 
 // Daily #1 is the player's local calendar day of LAUNCH_DATE. Each local
 // midnight starts a new puzzle (Wordle-style), so everyone on the same
@@ -72,22 +76,28 @@ function mulberry32(seed) {
 
 // The whole pool in a fixed shuffled order; day N walks through it three at a
 // time, so nothing repeats until the pool runs out (~110 days), then it cycles.
-const ORDER = (() => {
-  const random = mulberry32(SHUFFLE_SEED);
-  const indices = dailyPool.map((_, i) => i);
-  for (let i = indices.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
+// Computed once per pool object.
+const orders = new WeakMap();
+function shuffledOrder(pool) {
+  if (!orders.has(pool)) {
+    const random = mulberry32(SHUFFLE_SEED);
+    const indices = pool.map((_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    orders.set(pool, indices);
   }
-  return indices;
-})();
+  return orders.get(pool);
+}
 
 // Today's three anime, in play order.
-export function getDailyAnime(puzzleNumber) {
+export function getDailyAnime(pool, puzzleNumber) {
+  const order = shuffledOrder(pool);
   const start = (puzzleNumber - 1) * DAILY_ROUNDS;
   return Array.from({ length: DAILY_ROUNDS }, (_, k) => {
-    const position = (((start + k) % ORDER.length) + ORDER.length) % ORDER.length;
-    return dailyPool[ORDER[position]];
+    const position = (((start + k) % order.length) + order.length) % order.length;
+    return pool[order[position]];
   });
 }
 
@@ -99,9 +109,9 @@ export function msUntilNextPuzzle(now = new Date()) {
 
 // Pool titles matching a partial guess, for instant autocomplete in daily
 // mode. Matches any accepted answer but shows the display title.
-export function searchPool(query, limit = 5) {
+export function searchPool(pool, query, limit = 5) {
   const q = query.toLowerCase();
-  const matches = dailyPool.filter((anime) =>
+  const matches = pool.filter((anime) =>
     anime.answers.some((answer) => answer.toLowerCase().includes(q))
   );
   return matches

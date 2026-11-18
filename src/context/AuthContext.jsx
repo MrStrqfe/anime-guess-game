@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { supabase, supabaseEnabled } from "../lib/supabaseClient";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { getSupabase, mightHaveSession, supabaseEnabled } from "../lib/supabaseClient";
 
 const AuthContext = createContext({
   user: null,
@@ -11,38 +11,53 @@ const AuthContext = createContext({
 // Wraps the app and keeps the Supabase session in React state, so any
 // component can ask "who is signed in?" via useAuth() instead of talking to
 // Supabase directly. Also exposes the sign-in/sign-up/sign-out helpers.
+//
+// supabase-js is loaded lazily (see lib/supabaseClient.js): on startup only
+// if this browser might already be signed in, otherwise the first time an
+// auth helper is called. Guests never download it.
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(supabaseEnabled);
+  const [loading, setLoading] = useState(() => mightHaveSession());
+  const connectRef = useRef(null);
+
+  // Loads supabase-js (once), restores any saved session and subscribes so
+  // sign-ins/sign-outs update the UI immediately. Returns the client.
+  const connect = useCallback(() => {
+    if (!connectRef.current) {
+      connectRef.current = getSupabase()
+        .then(async (supabase) => {
+          const { data } = await supabase.auth.getSession();
+          setSession(data.session);
+          setLoading(false);
+
+          supabase.auth.onAuthStateChange((_event, nextSession) => {
+            setSession(nextSession);
+            setLoading(false);
+            // After an OAuth round-trip the URL carries ?code=...; clean it up
+            // once supabase-js has exchanged it for a session.
+            if (nextSession && window.location.search.includes("code=")) {
+              window.history.replaceState({}, "", window.location.pathname);
+            }
+          });
+          return supabase;
+        })
+        .catch((error) => {
+          connectRef.current = null;
+          setLoading(false);
+          throw error;
+        });
+    }
+    return connectRef.current;
+  }, []);
 
   useEffect(() => {
-    if (!supabaseEnabled) return;
-
-    // Load any existing session on startup (e.g. the user signed in last
-    // visit), then subscribe so sign-ins/sign-outs update the UI immediately.
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setLoading(false);
-      // After an OAuth round-trip the URL carries ?code=...; clean it up once
-      // supabase-js has exchanged it for a session.
-      if (nextSession && window.location.search.includes("code=")) {
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    if (mightHaveSession()) connect().catch(console.error);
+  }, [connect]);
 
   // Creates a new email/password account. Throws on failure so callers can
   // show the error message in the form.
   async function signUp(email, password) {
+    const supabase = await connect();
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
   }
@@ -50,6 +65,7 @@ export function AuthProvider({ children }) {
   // Signs in with email/password. The onAuthStateChange listener above picks
   // up the new session, so there's nothing else to do here on success.
   async function signIn(email, password) {
+    const supabase = await connect();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
   }
@@ -57,6 +73,7 @@ export function AuthProvider({ children }) {
   // Starts an OAuth sign-in ("google", "discord", ...). This navigates the
   // browser away to the provider and back, so nothing after the call runs.
   async function signInWithProvider(provider) {
+    const supabase = await connect();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -69,6 +86,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    const supabase = await connect();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGameState, MAX_GUESSES } from "./hooks/useGameState";
 import { useAuth } from "./context/AuthContext";
 import { recordGame, recordDaily } from "./api/stats";
@@ -11,6 +11,7 @@ import {
   stageIndex,
   stageLimit,
 } from "./lib/daily";
+import { loadDailyPool } from "./lib/dailyPoolLoader";
 import {
   loadProgress,
   saveProgress,
@@ -59,7 +60,14 @@ export default function App() {
   // Today's puzzle is fixed for the life of the page; the result sheet's
   // countdown reloads the page at midnight to pick up the next one.
   const [puzzleNumber] = useState(() => getPuzzleNumber());
-  const dailyAnime = useMemo(() => getDailyAnime(puzzleNumber), [puzzleNumber]);
+  // The daily pool is fetched as a separate cached file (dailyPoolLoader.js);
+  // null until it arrives.
+  const [pool, setPool] = useState(null);
+  const dailyAnime = useMemo(
+    () => (pool ? getDailyAnime(pool, puzzleNumber) : []),
+    [pool, puzzleNumber]
+  );
+  const searchDailyPool = useCallback((query) => (pool ? searchPool(pool, query) : []), [pool]);
   // The clip map the game reducer expects, in play order. The display title
   // goes first so the result sheet reveals it; `hints` unlock stage by stage.
   const dailyClips = useMemo(
@@ -103,19 +111,42 @@ export default function App() {
     () => localStorage.getItem("intro-seen") !== "true"
   );
 
-  // Starts today's daily, resuming any saved progress (or straight to the
-  // results if it's already done).
-  function startDaily() {
-    actions.startDaily(dailyClips, puzzleNumber, loadProgress(puzzleNumber) ?? {});
-  }
+  // Set when the daily should start but the pool hasn't loaded yet; the
+  // effect below starts it as soon as the pool arrives. Returning players
+  // skip the intro, so for them it's set from the first render.
+  const [dailyRequested, setDailyRequested] = useState(
+    () => localStorage.getItem("intro-seen") === "true"
+  );
 
-  // Returning players skip the intro and land directly in today's daily.
+  // Fetch the pool on startup. If it can't load (after retries), fall back
+  // to Practice, which runs on bundled clips and needs no pool.
   useEffect(() => {
-    if (localStorage.getItem("intro-seen") === "true") {
-      startDaily();
-    }
+    loadDailyPool()
+      .then(setPool)
+      .catch((error) => {
+        console.error("Failed to load the daily pool:", error);
+        setDailyRequested(false);
+        setSourceError((prev) => ({
+          trigger: prev.trigger + 1,
+          text: "Couldn't load today's daily, so here's Practice instead",
+        }));
+        actions.startGame();
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!pool || !dailyRequested) return;
+    setDailyRequested(false);
+    actions.startDaily(dailyClips, puzzleNumber, loadProgress(puzzleNumber) ?? {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool, dailyRequested, dailyClips, puzzleNumber]);
+
+  // Starts today's daily, resuming any saved progress (or straight to the
+  // results if it's already done). Waits for the pool if it's still loading.
+  function startDaily() {
+    setDailyRequested(true);
+  }
 
   // Closes the How to Play popup; on a first visit this also starts the daily.
   function handleIntroClose() {
@@ -130,7 +161,10 @@ export default function App() {
   function handleModeChange(mode) {
     videoRef.current?.pause();
     if (mode === "daily") startDaily();
-    else actions.startGame();
+    else {
+      setDailyRequested(false); // don't let a still-loading pool yank them back
+      actions.startGame();
+    }
   }
 
   // Save daily progress after every guess, so a refresh can't reset guesses.
@@ -501,6 +535,13 @@ export default function App() {
           />
         </VideoPlayer>
 
+        {/* While the reveal sheet is up, warm the next round's clip (index +
+            first bytes only) so it starts instantly, instead of preloading
+            the whole library up front. */}
+        {state.revealed && state.upcomingClipUrl && (
+          <video src={state.upcomingClipUrl} preload="metadata" muted hidden aria-hidden="true" />
+        )}
+
         {dailyLive && (
           <>
             <ClipTimeline
@@ -520,7 +561,7 @@ export default function App() {
 
         <GuessInput
           inputRef={guessInputRef}
-          localSearch={isDaily ? searchPool : undefined}
+          localSearch={isDaily ? searchDailyPool : undefined}
           value={state.guessValue}
           onChange={actions.setGuessValue}
           onSubmitEnter={handleSubmit}

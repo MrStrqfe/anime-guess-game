@@ -69,8 +69,12 @@ const VideoPlayer = forwardRef(function VideoPlayer(
         id="anime-video"
         ref={innerRef}
         src={src}
-        preload="auto"
+        // "metadata" rather than "auto": the browser fetches only the index
+        // up front, then streams the byte ranges actually played (HTTP 206).
+        // A daily stage 1 plays 8s, so most of the file is never downloaded.
+        preload="metadata"
         onLoadStart={() => setLoading(Boolean(src))}
+        onLoadedMetadata={() => setLoading(false)}
         onCanPlay={() => setLoading(false)}
         onError={() => setLoading(false)}
         style={{
